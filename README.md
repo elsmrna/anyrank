@@ -1,0 +1,64 @@
+# AnyRank
+
+iOS app for ranking things by direct comparison rather than absolute rating. See `Spec.md` for product requirements and `LocalDev.md` for local development guidance.
+
+## Repository layout
+
+```
+anyrank/
+├── Spec.md                 Product spec (single source of truth)
+├── LocalDev.md             Local development & visual testing plan
+├── BUILD_NOTES.md          What was built, what's stubbed
+├── Project.yml             xcodegen config — generates AnyRank.xcodeproj
+├── Secrets.xcconfig        Local secrets (gitignored)
+├── Secrets.xcconfig.example Template — copy and fill in
+├── AnyRank/                Source for the iOS app target
+├── AnyRankTests/           Unit tests (ranking algorithm)
+├── AnyRankSnapshotTests/   Snapshot tests (visual regression)
+├── issues/                 Flat-file issue tracker
+└── README.md               This file
+```
+
+## First-time setup
+
+The Swift sources are committed without an `.xcodeproj`. There are two ways to get the project open in Xcode.
+
+**Option A — xcodegen (recommended).** From the repo root, run `brew install xcodegen` once if you don't have it, then `xcodegen generate`. That produces `AnyRank.xcodeproj` from `Project.yml`. Open the `.xcodeproj` in Xcode and pick the AnyRank scheme. The project file is gitignored so it's regenerated, not committed.
+
+**Option B — manual Xcode project.** In Xcode, File → New → Project → iOS → App. Product Name `AnyRank`, organization identifier of your choice, interface SwiftUI, language Swift, storage SwiftData, include tests checked. Save it inside the repo as `AnyRank/AnyRank.xcodeproj`. Then drag the `AnyRank/`, `AnyRankTests/`, and `AnyRankSnapshotTests/` source folders into the corresponding targets. This works fine but is harder to keep in sync; xcodegen is preferred.
+
+Either way, the iOS deployment target is iOS 18.0.
+
+## Configuring secrets
+
+`Secrets.xcconfig` holds build-time keys (currently the Google OAuth client ID; eventually Google Places and TMDB credentials too). Copy `Secrets.xcconfig.example` to `Secrets.xcconfig` and fill it in. The file is gitignored. Leaving the values empty is fine for purely local-only development — sign-in will fail with a clear "not configured" error and the rest of the app works normally.
+
+To get a Google OAuth client ID: visit https://console.cloud.google.com/apis/credentials, create or pick a project, configure the OAuth consent screen, create an OAuth 2.0 Client ID of type "iOS" with bundle ID `com.ellismiranda.anyrank.AnyRank` (matching `Project.yml`). Paste the client ID into `GOOGLE_OAUTH_CLIENT_ID` and the same value reversed (the console shows this as "iOS URL scheme") into `GOOGLE_OAUTH_REVERSED_CLIENT_ID`.
+
+After editing `Secrets.xcconfig`, re-run `xcodegen generate` so the values flow into Info.plist.
+
+## Swift Package dependencies
+
+With xcodegen, dependencies are declared in `Project.yml` and resolved on `xcodegen generate` (or on first Xcode open). The current packages are `pointfreeco/swift-snapshot-testing` (attached to the snapshot test target only) and `google/GoogleSignIn-iOS` (attached to the app target). If resolution doesn't happen automatically, force it via File → Packages → Resolve Package Versions.
+
+## Running
+
+Pick the AnyRank scheme and a simulator (iPhone 16 Pro recommended; the snapshot reference images are pinned to it). Cmd-R runs the app. Cmd-U runs all tests including snapshots. The first snapshot run writes reference images; subsequent runs assert against them.
+
+## What's implemented vs stubbed
+
+The current build implements the data model, the ranking algorithm with thorough unit tests, the core SwiftUI screens (lists home, list detail, item detail, add flow, comparison screen, create list, re-rank), Google OAuth sign-in with a local-only bypass, a Settings sheet, preview seed data, and snapshot test scaffolding.
+
+Live Google Places search is implemented and used by Restaurants, Bars, and any Custom list that opted into Maps lookup at create time. Provide a `GOOGLE_PLACES_API_KEY` in `Secrets.xcconfig` and the app uses `LivePlacesSearchService`; leave it empty and the app falls back to `MockPlacesSearchService` so dev/preview/test stay usable. The search screen is sign-in-gated as a UX choice (under the hood Places is API-key gated, not OAuth-gated).
+
+Live TMDB movie search follows the same pattern: drop a `TMDB_READ_TOKEN` into `Secrets.xcconfig` and the Movies category uses `LiveMovieSearchService` against the TMDB v3 REST API; without one, it falls back to the mock. No sign-in gate on TMDB — it's unaffiliated with Google.
+
+Live Books search runs against Open Library (keyless, generous rate limits) with StoryGraph URLs constructed slug-optimistically from the title. Covers come from Open Library's cover CDN. Wired unconditionally; the mock stays available via environment injection for previews and tests. See `issues/closed/live-storygraph.md` for the design tradeoffs.
+
+Google Sheets sync ships as an opt-in toggle in Settings (off by default — sign-in alone identifies the user but doesn't move data off the device). When enabled, the app requests Drive/Sheets scopes, creates an "AnyRank Data" spreadsheet, and pushes one tab per list. See `issues/closed/google-oauth-sheets-sync.md` for the design notes.
+
+Also deferred: app icon, color palette polish, educational onboarding walkthrough, JSON export. See `issues/` for the tracked items and `Spec.md` "Open TBDs" for the full list.
+
+## Where to look first
+
+The ranking algorithm is the product. Read `AnyRank/Algorithm/RankingSession.swift` and `AnyRankTests/RankingSessionTests.swift` first. Then the data model in `AnyRank/Models/`, then the add-item flow in `AnyRank/Views/AddItem/`. For the auth layer, start with `AnyRank/Auth/AuthSession.swift`.

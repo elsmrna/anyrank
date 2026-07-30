@@ -1,0 +1,109 @@
+name: AnyRank
+
+options:
+  bundleIdPrefix: com.ellismiranda.anyrank
+  deploymentTarget:
+    iOS: "18.0"
+  developmentLanguage: en
+  xcodeVersion: "16.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+# Project-level xcconfig used by every target under this project.
+# xcodegen's `configFiles` key writes this as a real
+# `baseConfigurationReference` in the pbxproj (as a sibling of
+# `buildSettings`, where Xcode actually looks). An earlier iteration
+# used `settings.configs.<Config>.baseConfiguration`, which xcodegen
+# silently wrote as a random build setting *inside* `buildSettings` —
+# never a real xcconfig reference — so nothing from Secrets.xcconfig
+# was reaching Info.plist at build time.
+configFiles:
+  Debug: Secrets.xcconfig
+  Release: Secrets.xcconfig
+
+packages:
+  SnapshotTesting:
+    url: https://github.com/pointfreeco/swift-snapshot-testing
+    from: "1.17.0"
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: "7.1.0"
+  GooglePlaces:
+    url: https://github.com/googlemaps/ios-places-sdk
+    from: "9.0.0"
+
+targets:
+  AnyRank:
+    type: application
+    platform: iOS
+    sources:
+      - path: AnyRank
+    dependencies:
+      - package: GoogleSignIn
+        product: GoogleSignIn
+      - package: GoogleSignIn
+        product: GoogleSignInSwift
+      - package: GooglePlaces
+        product: GooglePlaces
+    info:
+      path: AnyRank/Info.plist
+      properties:
+        UILaunchScreen: {}
+        CFBundleDisplayName: AnyRank
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiresFullScreen: false
+        GIDClientID: $(GOOGLE_OAUTH_CLIENT_ID)
+        GooglePlacesAPIKey: $(GOOGLE_PLACES_API_KEY)
+        TMDBReadToken: $(TMDB_READ_TOKEN)
+        TwitchClientID: $(TWITCH_CLIENT_ID)
+        TwitchClientSecret: $(TWITCH_CLIENT_SECRET)
+        SpotifyClientID: $(SPOTIFY_CLIENT_ID)
+        SpotifyClientSecret: $(SPOTIFY_CLIENT_SECRET)
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLSchemes:
+              - $(GOOGLE_OAUTH_REVERSED_CLIENT_ID)
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.ellismiranda.anyrank.AnyRank
+
+  AnyRankTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AnyRankTests
+    dependencies:
+      - target: AnyRank
+
+  AnyRankSnapshotTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AnyRankSnapshotTests
+    dependencies:
+      - target: AnyRank
+      - package: SnapshotTesting
+        product: SnapshotTesting
+
+schemes:
+  AnyRank:
+    build:
+      targets:
+        AnyRank: all
+        AnyRankTests: [test]
+        AnyRankSnapshotTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AnyRankTests
+        - AnyRankSnapshotTests

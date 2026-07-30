@@ -1,0 +1,28 @@
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+# Snapshot test failures
+**/__Snapshots__/.DS_Store
+*.failure.png
+
+# Secrets — API keys, OAuth client IDs, etc.
+Secrets.xcconfig
+GoogleService-Info.plist
