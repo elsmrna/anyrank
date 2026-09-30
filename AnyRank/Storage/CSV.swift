@@ -52,7 +52,11 @@ enum CSV {
                 case ",":
                     current.append(field)
                     field = ""
-                case "\n":
+                // Swift treats "\r\n" as a single Character (one grapheme
+                // cluster), so it never matches "\n" or "\r" on its own —
+                // it needs its own case or CRLF documents collapse into
+                // one row.
+                case "\n", "\r\n":
                     current.append(field)
                     field = ""
                     rows.append(current)
