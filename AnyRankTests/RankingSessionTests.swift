@@ -22,6 +22,7 @@ final class RankingSessionTests: XCTestCase {
         return .init(bucketContents: dict)
     }
 
+    @MainActor
     private func assertFinished(
         _ session: RankingSession,
         bucket: Bucket,

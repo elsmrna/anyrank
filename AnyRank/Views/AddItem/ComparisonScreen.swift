@@ -16,9 +16,9 @@ import SwiftUI
 struct ComparisonScreen: View {
     let newItemName: String
     /// Optional thumbnail URL for the new (staged) item — poster / cover.
-    let newItemImageURLString: String?
+    var newItemImageURLString: String? = nil
     /// Optional one-line supporting text for the new item.
-    let newItemSecondaryText: String?
+    var newItemSecondaryText: String? = nil
     let session: RankingSession
     let onAnswer: (UUID) -> Void
 

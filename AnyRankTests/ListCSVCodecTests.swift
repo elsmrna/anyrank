@@ -38,7 +38,7 @@ final class ListCSVCodecTests: XCTestCase {
         XCTAssertEqual(round.longitude, -118.23)
         XCTAssertEqual(round.mapsURLString, "https://maps.google.com/?cid=123")
         XCTAssertEqual(round.notes, "great pasta")
-        XCTAssertEqual(round.dateConsumed?.timeIntervalSince1970,
+        XCTAssertEqual(round.dateConsumed?.timeIntervalSince1970 ?? .nan,
                        Date(timeIntervalSince1970: 1_700_000_000).timeIntervalSince1970,
                        accuracy: 1.0)
     }

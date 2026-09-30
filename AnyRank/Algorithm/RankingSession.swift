@@ -34,6 +34,13 @@ final class RankingSession {
         /// Optional one-line supporting text — year, author, address.
         /// Helps the user disambiguate similarly-named opponents.
         let secondaryText: String?
+
+        init(id: UUID, name: String, imageURLString: String? = nil, secondaryText: String? = nil) {
+            self.id = id
+            self.name = name
+            self.imageURLString = imageURLString
+            self.secondaryText = secondaryText
+        }
     }
 
     /// Snapshot of the list's existing items, organized by bucket and

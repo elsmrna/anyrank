@@ -78,6 +78,9 @@ targets:
   AnyRankTests:
     type: bundle.unit-test
     platform: iOS
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
     sources:
       - path: AnyRankTests
     dependencies:
@@ -86,6 +89,9 @@ targets:
   AnyRankSnapshotTests:
     type: bundle.unit-test
     platform: iOS
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
     sources:
       - path: AnyRankSnapshotTests
     dependencies:
