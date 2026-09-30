@@ -25,113 +25,61 @@ struct PlaceSearchScreen: View {
     @Environment(\.placesService) private var service
     @Environment(AuthSession.self) private var auth
 
-    @State private var query: String = ""
-    @State private var results: [PlaceSearchResult] = []
-    @State private var isSearching = false
-    @State private var errorMessage: String?
-    /// Focus the search field on appear so the keyboard is up
-    /// immediately — one less tap to start typing.
-    @FocusState private var searchFieldFocused: Bool
-
     var body: some View {
         if auth.signedInUser == nil {
             signInGate
         } else {
-            searchList
+            CatalogSearchScreen(
+                prompt: "Search places",
+                category: stagedCategory,
+                emptyHint: "Search by name or neighborhood",
+                search: { try await service.search(query: $0, kind: kind) },
+                row: { SearchRowContent(title: $0.name, subtitle: $0.address) },
+                onSelect: select
+            )
         }
     }
 
     // MARK: Sign-in gate
 
     private var signInGate: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 18) {
+            Spacer()
             Image(systemName: "mappin.and.ellipse")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("Sign in to look up places")
-                .font(.title3.weight(.semibold))
-            Text("Google Places search is available once you sign in with your Google account. Items will be tied to their canonical Maps entry.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(Theme.accent)
+                .frame(width: 72, height: 72)
+                .background(Theme.accent.opacity(0.12), in: Circle())
+            VStack(spacing: 8) {
+                Text("Sign in to look up places")
+                    .font(.display(.title2))
+                    .foregroundStyle(Theme.textPrimary)
+                Text("Place search uses Google Maps, so each spot is tied to its real address and map link.")
+                    .font(.callout)
+                    .foregroundStyle(Theme.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            if let err = auth.lastError {
+                Text(err.localizedDescription)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.danger)
+                    .multilineTextAlignment(.center)
+            }
+            Spacer()
             Button {
                 Task { await auth.signIn() }
             } label: {
                 if auth.isSigningIn {
-                    ProgressView()
+                    ProgressView().tint(Theme.onAccent)
                 } else {
-                    Label("Sign in with Google", systemImage: "person.crop.circle.badge.checkmark")
+                    Text("Sign in with Google")
                 }
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.primary)
             .disabled(auth.isSigningIn)
-            if let err = auth.lastError {
-                Text(err.localizedDescription)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
-    }
-
-    // MARK: Search list
-
-    private var searchList: some View {
-        List {
-            Section {
-                TextField("Search places", text: $query)
-                    .textFieldStyle(.plain)
-                    .textInputAutocapitalization(.words)
-                    .focused($searchFieldFocused)
-                    .onChange(of: query) { _, newValue in
-                        Task { await runSearch(newValue) }
-                    }
-                    .onAppear {
-                        searchFieldFocused = true
-                        Task { await runSearch("") }
-                    }
-            }
-
-            if isSearching {
-                Section { ProgressView().frame(maxWidth: .infinity) }
-            } else if let errorMessage {
-                Section { Text(errorMessage).foregroundStyle(.red) }
-            } else {
-                Section {
-                    ForEach(results) { result in
-                        Button {
-                            select(result)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(result.name)
-                                Text(result.address)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-        }
-    }
-
-    private func runSearch(_ query: String) async {
-        isSearching = true
-        errorMessage = nil
-        do {
-            results = try await service.search(query: query, kind: kind)
-        } catch {
-            errorMessage = error.localizedDescription
-            results = []
-        }
-        isSearching = false
+        .padding(.horizontal, Theme.gutter)
+        .padding(.bottom, 8)
     }
 
     private func select(_ result: PlaceSearchResult) {

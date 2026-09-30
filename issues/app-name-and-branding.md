@@ -16,6 +16,10 @@ Working name is "AnyRank" (folder name). No final name, app icon, launch screen,
 - A defined bucket color palette — four colors that are distinguishable, accessible at the default text contrast, and look right both light and dark mode. Stored as named asset colors so they're swappable centrally.
 - Accent color picked (currently SwiftUI default tint).
 
+## Progress (2026-09-30)
+
+Done: bucket palette (earthy four with glyphs as a secondary signal, light + dark), accent color (terracotta, `AccentColor` asset + `Theme.accent`), launch background color, a first-pass app icon (terracotta with descending rank bars). All tokens live in `AnyRank/Design/Theme.swift`. Still open: final app name, and a designer pass on the icon (including dark/tinted variants).
+
 ## Notes
 
 Bucket colors are the most user-visible color choice; they appear on every item row. Worth testing the palette against colorblind users (deuteranopia is the main risk for red/green pairs). One option is to add a secondary signal — a glyph or position indicator — alongside color, but the spec deliberately chose color-only so the list view stays minimal.

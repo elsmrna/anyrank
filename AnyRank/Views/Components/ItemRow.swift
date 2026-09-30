@@ -1,43 +1,52 @@
 import SwiftUI
 
-/// Row for a single item in the list-detail view. Shows the bucket accent,
-/// the name, an optional score, an optional secondary detail, and a chevron
-/// indicating tap-through.
+/// Row for a single item in the list-detail view: rank, artwork (for
+/// categories that have it), name, a secondary detail, and a bucket-tinted
+/// score badge. The badge shows the bucket glyph until the bucket has
+/// enough items for the score to mean something (Spec § 4).
 struct ItemRow: View {
     let item: RankItem
+    /// 1-based position in the whole list; nil hides the rank column.
+    var rank: Int? = nil
 
     var body: some View {
         HStack(spacing: 12) {
-            BucketAccent(bucket: item.bucket)
-                .frame(height: 40)
+            if let rank {
+                Text("\(rank)")
+                    .font(.score(.footnote, weight: .semibold))
+                    .foregroundStyle(Theme.textTertiary)
+                    .frame(minWidth: 20, alignment: .trailing)
+            }
+
+            if let category = item.list?.category, category.hasArtwork {
+                ArtworkView(
+                    urlString: item.list.flatMap { RankingApplier.comparisonImageURLString(for: item, in: $0) },
+                    category: category,
+                    width: 36,
+                    cornerRadius: 6
+                )
+            }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name)
-                    .font(.body)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
-                if let secondary = secondaryText {
+                if let secondary = secondaryText, !secondary.isEmpty {
                     Text(secondary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
                 }
             }
 
             Spacer(minLength: 8)
 
-            if item.shouldDisplayScore {
-                Text(formattedScore)
-                    .font(.title3.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(.primary)
-            }
+            ScoreBadge(bucket: item.bucket, score: item.shouldDisplayScore ? item.score : nil)
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
-    }
-
-    private var formattedScore: String {
-        String(format: "%.1f", item.score)
+        .accessibilityElement(children: .combine)
     }
 
     private var secondaryText: String? {
@@ -82,7 +91,7 @@ struct ItemRow: View {
     let list = repo.lists.first!
     return List {
         ForEach(list.itemsSortedByScore()) { item in
-            ItemRow(item: item)
+            ItemRow(item: item, rank: 1)
         }
     }
 }

@@ -12,31 +12,50 @@ struct SignInOnboardingView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
 
+    @State private var appeared = false
+
     var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
+        VStack(spacing: 0) {
+            Spacer(minLength: 24)
 
-            VStack(spacing: 12) {
-                Image(systemName: "list.star")
-                    .font(.system(size: 64, weight: .semibold))
-                    .foregroundStyle(.tint)
-                Text("Welcome to AnyRank")
-                    .font(.largeTitle.bold())
-                Text("Rank the things you love by comparing them, not rating them.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+            // A tiny illustration of the core mechanic: two cards, pick one.
+            ZStack {
+                demoCard(title: "Bestia", subtitle: "Arts District", category: .restaurants, chosen: true)
+                    .rotationEffect(.degrees(-5))
+                    .offset(x: -18, y: appeared ? -44 : -20)
+                demoCard(title: "Kismet", subtitle: "Los Feliz", category: .restaurants, chosen: false)
+                    .rotationEffect(.degrees(4))
+                    .offset(x: 18, y: appeared ? 52 : 24)
             }
-
-            Spacer()
+            .frame(height: 220)
+            .opacity(appeared ? 1 : 0)
+            .accessibilityHidden(true)
 
             VStack(spacing: 12) {
-                Text("Sign in to save your lists across devices once cloud sync ships, or skip and keep everything on this device only.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                Text("Rank by comparing,\nnot rating.")
+                    .font(.display(.largeTitle))
+                    .foregroundStyle(Theme.textPrimary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                Text("Pick between two things you've tried. AnyRank does the math and builds a list that reflects what you actually prefer.")
+                    .font(.body)
+                    .foregroundStyle(Theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 24)
+            .opacity(appeared ? 1 : 0)
+            .offset(y: appeared ? 0 : 12)
+
+            Spacer(minLength: 24)
+
+            VStack(spacing: 12) {
+                Button {
+                    complete()
+                } label: {
+                    Text("Get started")
+                }
+                .buttonStyle(.primary)
+                .disabled(auth.isSigningIn)
 
                 Button {
                     Task {
@@ -46,42 +65,61 @@ struct SignInOnboardingView: View {
                         }
                     }
                 } label: {
-                    HStack {
+                    HStack(spacing: 8) {
                         if auth.isSigningIn {
                             ProgressView()
-                                .tint(.white)
-                        } else {
-                            Image(systemName: "person.circle.fill")
                         }
                         Text(auth.isSigningIn ? "Signing in…" : "Sign in with Google")
-                            .fontWeight(.semibold)
                     }
-                    .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .buttonStyle(.secondary)
                 .disabled(auth.isSigningIn)
 
-                Button("Continue without an account") {
-                    complete()
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .frame(maxWidth: .infinity)
-                .disabled(auth.isSigningIn)
+                Text("Everything stays on this device unless you sign in and turn on Google Sheets backup.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 4)
 
                 if let error = auth.lastError {
                     Text(error.localizedDescription)
-                        .font(.caption)
-                        .foregroundStyle(.red)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.danger)
                         .multilineTextAlignment(.center)
-                        .padding(.top, 4)
                 }
             }
-            .padding(.horizontal)
-            .padding(.bottom, 24)
         }
+        .padding(.horizontal, Theme.gutter)
+        .padding(.bottom, 16)
+        .screenBackground()
+        .presentationBackground(Theme.background)
         .interactiveDismissDisabled(true)
+        .onAppear {
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.1)) {
+                appeared = true
+            }
+        }
+    }
+
+    private func demoCard(title: String, subtitle: String, category: Category, chosen: Bool) -> some View {
+        HStack(spacing: 12) {
+            CategoryIconTile(category: category, size: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                Text(subtitle)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Spacer(minLength: 12)
+            Image(systemName: chosen ? "checkmark.circle.fill" : "circle")
+                .font(.title3)
+                .foregroundStyle(chosen ? Theme.accent : Theme.hairline)
+        }
+        .padding(16)
+        .frame(width: 280)
+        .card(cornerRadius: 20)
     }
 
     private func complete() {

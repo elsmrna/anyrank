@@ -72,7 +72,13 @@ The IGDB and Spotify services share `AppOAuthTokenStore` — a small actor that 
 
 The remaining stubs: Google Places photos on comparison cards (would need an extra Places SDK call per result — deferred; see `issues/live-places-photos.md`) and the educational onboarding walkthrough.
 
-App icon, launch screen, and color palette have not been customized. The launch screen is the system default solid background. Building and running will produce a usable but visually plain app.
+## Visual design
+
+The UI is themed from a single set of tokens in `AnyRank/Design/Theme.swift` (colors, bucket colors/glyphs, category tints, serif display type, motion) and shared components in `AnyRank/Design/Components.swift` (cards, primary/secondary/pressable button styles, artwork thumbnails, score badges, bucket distribution bar, search field). The palette is earthy: terracotta accent, stone, taupe, espresso ink, olive; dark mode is a deep espresso with lifted versions of the same hues. Every bucket carries a glyph as well as a color so buckets stay distinguishable without color vision. Views should reach for `Theme.*` rather than system colors.
+
+The add-item and re-rank sheets share `PlacementFlowView`: each step is a real `NavigationStack` push driven by `AddItemCoordinator.path`, so back and edge-swipe step the state machine back. All category searches share `CatalogSearchScreen`, which debounces through `.task(id:)` (a new keystroke cancels the in-flight request) and keeps results on screen while the next query loads.
+
+App icon, accent color, and launch background live in `AnyRank/Assets.xcassets`. For eyeballing the UI with data, launch a Debug build with the `-seedDemoData` argument — an empty store gets filled with the preview datasets (see `Preview/DemoSeed.swift`).
 
 Onboarding is not implemented — first launch drops the user into the empty-state of `ListsHomeView`, which has a primary "Create your first list" button. That's adequate for v1; full onboarding can come later.
 

@@ -21,55 +21,72 @@ struct AddItemResultScreen: View {
     /// How long the screen stays visible after the checkmark animates
     /// in. Long enough to register as a "done" moment, short enough
     /// not to feel like waiting.
-    private static let dismissDelay: Duration = .milliseconds(1100)
+    private static let dismissDelay: Duration = .milliseconds(1400)
 
     /// Drives the checkmark scale/opacity animation. Starts false so we
     /// can animate to true on appear.
     @State private var showCheckmark: Bool = false
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 28) {
             Spacer()
 
-            // Bucket-tinted circle with a checkmark. Springs in on appear.
+            // Bucket-tinted rings with the bucket glyph. The halo breathes
+            // out as the badge springs in.
             ZStack {
                 Circle()
-                    .fill(placement.bucket.color.opacity(0.18))
-                    .frame(width: 120, height: 120)
+                    .fill(placement.bucket.color.opacity(0.10))
+                    .frame(width: 180, height: 180)
+                    .scaleEffect(showCheckmark ? 1 : 0.6)
                 Circle()
-                    .strokeBorder(placement.bucket.color, lineWidth: 3)
-                    .frame(width: 120, height: 120)
-                Image(systemName: "checkmark")
-                    .font(.system(size: 56, weight: .bold, design: .rounded))
-                    .foregroundStyle(placement.bucket.color)
-                    .scaleEffect(showCheckmark ? 1 : 0.1)
+                    .fill(placement.bucket.color.opacity(0.18))
+                    .frame(width: 128, height: 128)
+                Circle()
+                    .fill(placement.bucket.color)
+                    .frame(width: 84, height: 84)
+                    .overlay {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.onAccent)
+                    }
+                    .scaleEffect(showCheckmark ? 1 : 0.2)
                     .opacity(showCheckmark ? 1 : 0)
             }
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel("Added to \(placement.bucket.displayName)")
 
-            VStack(spacing: 6) {
+            VStack(spacing: 10) {
                 Text(stagedName)
-                    .font(.title3.weight(.semibold))
+                    .font(.display(.title))
+                    .foregroundStyle(Theme.textPrimary)
                     .multilineTextAlignment(.center)
-                Text("Added to \(placement.bucket.displayName)")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                BucketTag(bucket: placement.bucket)
             }
+            .opacity(showCheckmark ? 1 : 0)
+            .offset(y: showCheckmark ? 0 : 10)
 
             Spacer()
+
+            Text("Tap to continue")
+                .font(.footnote)
+                .foregroundStyle(Theme.textTertiary)
+                .padding(.bottom, 16)
         }
+        .padding(.horizontal, Theme.gutter)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        // Tap anywhere to bypass the wait. Doesn't hurt to expose an
-        // impatience escape hatch even though the auto-dismiss is short.
+        // Tap anywhere to bypass the wait.
         .onTapGesture { onDone() }
+        .sensoryFeedback(.success, trigger: showCheckmark)
         .onAppear {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.55)) {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.62)) {
                 showCheckmark = true
             }
-            Task {
-                try? await Task.sleep(for: Self.dismissDelay)
-                onDone()
-            }
+        }
+        .task {
+            try? await Task.sleep(for: Self.dismissDelay)
+            guard !Task.isCancelled else { return }
+            onDone()
         }
     }
 }

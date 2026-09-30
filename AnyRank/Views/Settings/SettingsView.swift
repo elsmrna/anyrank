@@ -10,18 +10,25 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                accountSection
-                syncSection
-                aboutSection
+                Group {
+                    accountSection
+                    syncSection
+                    aboutSection
+                }
+                .listRowBackground(Theme.surface)
             }
+            .themedList()
+            .tint(Theme.accent)
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
+                        .fontWeight(.semibold)
                 }
             }
         }
+        .presentationBackground(Theme.background)
     }
 
     // MARK: Account
@@ -31,10 +38,11 @@ struct SettingsView: View {
         Section {
             if let user = auth.signedInUser {
                 AccountRow(user: user)
-                Button("Sign out", role: .destructive) {
+                Button("Sign out") {
                     sync.disableSync()
                     auth.signOut()
                 }
+                .foregroundStyle(Theme.danger)
             } else {
                 Button {
                     Task { await auth.signIn() }
@@ -43,7 +51,7 @@ struct SettingsView: View {
                         if auth.isSigningIn {
                             ProgressView()
                         } else {
-                            Image(systemName: "person.circle.fill")
+                            Image(systemName: "person.crop.circle")
                         }
                         Text(auth.isSigningIn ? "Signing in…" : "Sign in with Google")
                     }
@@ -53,7 +61,7 @@ struct SettingsView: View {
                 if let error = auth.lastError {
                     Text(error.localizedDescription)
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Theme.danger)
                 }
             }
         } header: {
@@ -96,14 +104,14 @@ struct SettingsView: View {
                 case .error(let message):
                     Label(message, systemImage: "exclamationmark.triangle")
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Theme.danger)
                 case .disabled:
                     EmptyView()
                 }
             } header: {
                 Text("Sync")
             } footer: {
-                Text("Each list becomes a tab in a Google Sheet named \"AnyRank Data\" in your Drive. Edit on phone or in Sheets — changes flow both ways.")
+                Text("Each list is backed up as a tab in a Google Sheet named \"AnyRank Data\" in your Drive. The app is the source of truth — edits made directly in the Sheet get overwritten.")
             }
         }
     }
@@ -148,8 +156,8 @@ private struct AccountRow: View {
                 Text(user.displayName)
                     .font(.body.weight(.semibold))
                 Text(user.email)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
             }
         }
         .padding(.vertical, 4)
@@ -176,7 +184,7 @@ private struct AccountRow: View {
         Image(systemName: "person.circle.fill")
             .resizable()
             .aspectRatio(contentMode: .fill)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.textTertiary)
     }
 }
 

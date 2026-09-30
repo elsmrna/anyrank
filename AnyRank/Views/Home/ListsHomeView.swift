@@ -4,7 +4,7 @@ import SwiftUI
 struct ListsHomeView: View {
     @Environment(Repository.self) private var repository
     @Environment(AuthSession.self) private var auth
-    @State private var creatingList = false
+    @State private var creatingList: CreateListRequest?
     @State private var showingSettings = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
 
@@ -29,7 +29,9 @@ struct ListsHomeView: View {
                 listOfLists
             }
         }
-        .navigationTitle("AnyRank")
+        .screenBackground()
+        .navigationTitle(lists.isEmpty ? "" : "Your lists")
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {
@@ -38,17 +40,24 @@ struct ListsHomeView: View {
                     Label("Settings", systemImage: "gearshape")
                 }
             }
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    creatingList = true
-                } label: {
-                    Label("New list", systemImage: "plus")
+            if !lists.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        creatingList = CreateListRequest()
+                    } label: {
+                        Label("New list", systemImage: "plus")
+                    }
                 }
             }
         }
-        .sheet(isPresented: $creatingList) {
+        .navigationDestination(for: UUID.self) { listID in
+            if let list = repository.lists.first(where: { $0.id == listID }) {
+                ListDetailView(list: list)
+            }
+        }
+        .sheet(item: $creatingList) { request in
             NavigationStack {
-                CreateListView()
+                CreateListView(initialCategory: request.category)
             }
         }
         .sheet(isPresented: $showingSettings) {
@@ -114,47 +123,96 @@ struct ListsHomeView: View {
     private func commitDelete() {
         guard let list = deletingList else { return }
         deletingList = nil
-        repository.deleteList(list)
-    }
-
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No lists yet", systemImage: "list.bullet.rectangle")
-        } description: {
-            Text("Create a list to start ranking restaurants, bars, movies, or anything else.")
-        } actions: {
-            Button {
-                creatingList = true
-            } label: {
-                Text("Create your first list")
-            }
-            .buttonStyle(.borderedProminent)
+        withAnimation(Theme.spring) {
+            repository.deleteList(list)
         }
     }
 
+    // MARK: Empty state
+
+    private var emptyState: some View {
+        ScrollView {
+            VStack(spacing: 28) {
+                VStack(spacing: 14) {
+                    ZStack {
+                        CategoryIconTile(category: .movies, size: 56)
+                            .rotationEffect(.degrees(-10))
+                            .offset(x: -46, y: 8)
+                        CategoryIconTile(category: .books, size: 56)
+                            .rotationEffect(.degrees(10))
+                            .offset(x: 46, y: 8)
+                        CategoryIconTile(category: .restaurants, size: 68)
+                            .background(Theme.background, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    }
+                    .frame(height: 96)
+                    .padding(.bottom, 8)
+
+                    Text("Rank anything")
+                        .font(.display(.largeTitle))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("Skip the star ratings. Compare things two at a time and AnyRank builds your list for you.")
+                        .font(.body)
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 48)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionLabel("Start with")
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 10)], spacing: 10) {
+                        ForEach(Category.allCases) { category in
+                            Button {
+                                creatingList = CreateListRequest(category: category)
+                            } label: {
+                                VStack(spacing: 8) {
+                                    Image(systemName: category.systemIconName)
+                                        .font(.system(size: 20, weight: .medium))
+                                        .foregroundStyle(category.tint)
+                                    Text(category.displayName)
+                                        .font(.subheadline.weight(.medium))
+                                        .foregroundStyle(Theme.textPrimary)
+                                }
+                                .frame(maxWidth: .infinity, minHeight: 80)
+                                .card(cornerRadius: 16)
+                            }
+                            .buttonStyle(.pressable)
+                        }
+                    }
+                }
+
+                Button("Create a list") {
+                    creatingList = CreateListRequest()
+                }
+                .buttonStyle(.primary)
+            }
+            .padding(.horizontal, Theme.gutter)
+            .padding(.bottom, 32)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    // MARK: Lists
+
     private var listOfLists: some View {
-        List {
-            ForEach(Category.allCases) { category in
-                let categoryLists = lists.filter { $0.category == category }
-                if !categoryLists.isEmpty {
-                    Section(category.displayName) {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 12) {
+                Text(summaryLine)
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.bottom, 8)
+
+                ForEach(Category.allCases) { category in
+                    let categoryLists = lists.filter { $0.category == category }
+                    if !categoryLists.isEmpty {
+                        SectionLabel(category.displayName)
+                            .padding(.top, 12)
+                            .padding(.leading, 4)
                         ForEach(categoryLists) { list in
                             NavigationLink(value: list.id) {
-                                ListSummaryRow(list: list)
+                                ListCard(list: list)
                             }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    deletingList = list
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                                Button {
-                                    beginRename(list)
-                                } label: {
-                                    Label("Rename", systemImage: "pencil")
-                                }
-                                .tint(.orange)
-                            }
+                            .buttonStyle(.pressable)
                             .contextMenu {
                                 Button {
                                     beginRename(list)
@@ -167,35 +225,101 @@ struct ListsHomeView: View {
                                     Label("Delete", systemImage: "trash")
                                 }
                             }
+                            .transition(.opacity.combined(with: .scale(scale: 0.96)))
                         }
                     }
                 }
             }
+            .padding(.horizontal, Theme.gutter)
+            .padding(.bottom, 32)
         }
-        .navigationDestination(for: UUID.self) { listID in
-            if let list = repository.lists.first(where: { $0.id == listID }) {
-                ListDetailView(list: list)
-            }
-        }
+    }
+
+    private var summaryLine: String {
+        let itemCount = lists.reduce(0) { $0 + $1.items.count }
+        let listPart = "\(lists.count) list\(lists.count == 1 ? "" : "s")"
+        let itemPart = "\(itemCount) thing\(itemCount == 1 ? "" : "s") ranked"
+        return "\(listPart) · \(itemPart)"
     }
 }
 
-private struct ListSummaryRow: View {
+/// Identifiable wrapper so the create sheet can open pre-seeded with a
+/// category (from the empty-state shortcuts) or with the default.
+struct CreateListRequest: Identifiable {
+    let id = UUID()
+    var category: Category = .restaurants
+}
+
+private struct ListCard: View {
     let list: RankList
 
+    private var topItems: [RankItem] {
+        Array(list.itemsSortedByScore().prefix(3))
+    }
+
     var body: some View {
-        HStack {
-            Image(systemName: list.category.systemIconName)
-                .foregroundStyle(.tint)
-                .frame(width: 28)
-            VStack(alignment: .leading) {
-                Text(list.name)
-                Text("\(list.items.count) item\(list.items.count == 1 ? "" : "s")")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 14) {
+                CategoryIconTile(category: list.category)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(list.name)
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                    Text(detailLine)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                if hasCoverArt {
+                    coverStack
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.textTertiary)
+                }
+            }
+            if !list.items.isEmpty {
+                BucketDistributionBar(counts: list.bucketCounts)
             }
         }
-        .padding(.vertical, 2)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .card()
+        .contentShape(RoundedRectangle(cornerRadius: Theme.cornerRadius))
+    }
+
+    /// Only fan out covers when there's real art; a row of placeholders
+    /// is just noise.
+    private var hasCoverArt: Bool {
+        list.category.hasArtwork
+            && topItems.contains { RankingApplier.comparisonImageURLString(for: $0, in: list) != nil }
+    }
+
+    private var detailLine: String {
+        let count = list.items.count
+        guard let top = topItems.first else { return "Nothing ranked yet" }
+        return "\(count) \(count == 1 ? "item" : "items") · #1 \(top.name)"
+    }
+
+    /// Top three covers fanned out, #1 in front.
+    private var coverStack: some View {
+        HStack(spacing: -14) {
+            ForEach(Array(topItems.enumerated()), id: \.element.id) { index, item in
+                ArtworkView(
+                    urlString: RankingApplier.comparisonImageURLString(for: item, in: list),
+                    category: list.category,
+                    width: 30,
+                    cornerRadius: 5
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .strokeBorder(Theme.surface, lineWidth: 1.5)
+                )
+                .zIndex(Double(3 - index))
+            }
+        }
     }
 }
 

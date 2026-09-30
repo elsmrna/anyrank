@@ -1,12 +1,11 @@
 import SwiftUI
 
 /// Top-level sheet for adding an item. Holds the `AddItemCoordinator` and
-/// dispatches to the right child screen based on the current phase.
+/// hands it to `PlacementFlowView`, which pushes each step.
 struct AddItemFlow: View {
     let list: RankList
 
     @Environment(Repository.self) private var repository
-    @Environment(\.dismiss) private var dismiss
 
     @State private var coordinator: AddItemCoordinator
 
@@ -16,81 +15,16 @@ struct AddItemFlow: View {
     }
 
     var body: some View {
-        NavigationStack {
-            content
-                .navigationTitle(navigationTitle)
-                .navigationBarTitleDisplayMode(.inline)
-                // Hide the nav bar entirely on the success screen — the
-                // checkmark stands on its own and the auto-dismiss makes
-                // navigation meaningless. Everywhere else the leading
-                // toolbar swaps between Cancel (first step) and a back
-                // chevron (later steps), so the user can undo a wrong
-                // pick without abandoning the whole flow. Full cancel
-                // remains available via swipe-down on the sheet.
-                .toolbar(isFinished ? .hidden : .visible, for: .navigationBar)
-                .toolbar {
-                    if !isFinished {
-                        ToolbarItem(placement: .cancellationAction) {
-                            if coordinator.canGoBack {
-                                Button {
-                                    coordinator.back()
-                                } label: {
-                                    Label("Back", systemImage: "chevron.backward")
-                                }
-                            } else {
-                                Button("Cancel") { dismiss() }
-                            }
-                        }
-                    }
-                }
-        }
-    }
-
-    private var isFinished: Bool {
-        if case .finished = coordinator.phase { return true }
-        return false
-    }
-
-    @ViewBuilder
-    private var content: some View {
-        switch coordinator.phase {
-        case .identifying:
+        PlacementFlowView(
+            coordinator: coordinator,
+            rootTitle: "Add to \(list.name)",
+            newItemImageURLString: stagedImageURLString,
+            newItemSecondaryText: stagedSecondaryText,
+            onCommit: apply(staged:placement:)
+        ) {
             ItemSearchScreen(category: list.category, list: list) { staged in
                 coordinator.itemIdentified(staged)
             }
-
-        case .bucketPick(let staged):
-            BucketPickerScreen(itemName: staged.name) { bucket in
-                coordinator.bucketPicked(bucket)
-            }
-
-        case .comparing(let staged, let session):
-            ComparisonScreen(
-                newItemName: staged.name,
-                newItemImageURLString: stagedImageURLString(staged),
-                newItemSecondaryText: stagedSecondaryText(staged),
-                session: session,
-                onAnswer: { winner in coordinator.answer(winner: winner) }
-            )
-
-        case .finished(let staged, let placement):
-            AddItemResultScreen(
-                stagedName: staged.name,
-                placement: placement,
-                onDone: {
-                    apply(staged: staged, placement: placement)
-                    dismiss()
-                }
-            )
-        }
-    }
-
-    private var navigationTitle: String {
-        switch coordinator.phase {
-        case .identifying:    return "Add to \(list.name)"
-        case .bucketPick:     return "How was it?"
-        case .comparing:      return "Which did you prefer?"
-        case .finished:       return "Result"
         }
     }
 

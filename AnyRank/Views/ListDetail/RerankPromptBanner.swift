@@ -8,22 +8,48 @@ struct RerankPromptBanner: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Time for a re-check?", systemImage: "arrow.triangle.2.circlepath")
-                .font(.subheadline.weight(.semibold))
-            Text("You've added \(list.additionsSinceLastRerankPrompt) items since the last check. Want to re-rank an older item to keep things accurate?")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            HStack {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.olive)
+                    .frame(width: 36, height: 36)
+                    .background(Theme.olive.opacity(0.14), in: Circle())
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Time for a re-check?")
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                    Text("You've added \(list.additionsSinceLastRerankPrompt) items since the last check. Re-ranking an older one keeps the list honest.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            HStack(spacing: 10) {
                 Button("Re-rank one", action: onAccept)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(CompactButtonStyle(prominent: true))
                 Button("Not now", action: onDismiss)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(CompactButtonStyle(prominent: false))
             }
         }
-        .padding(12)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .card()
+    }
+}
+
+private struct CompactButtonStyle: ButtonStyle {
+    let prominent: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(prominent ? Theme.onAccent : Theme.textPrimary)
+            .padding(.horizontal, 16)
+            .frame(height: 36)
+            .background(prominent ? Theme.accent : Theme.surfaceMuted, in: Capsule())
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(Theme.press, value: configuration.isPressed)
     }
 }
 
@@ -39,5 +65,6 @@ struct RerankPromptBanner: View {
     }()
     return RerankPromptBanner(list: list, onAccept: {}, onDismiss: {})
         .padding()
+        .screenBackground()
         .environment(repo)
 }

@@ -36,6 +36,16 @@ struct AnyRankApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        AppAppearance.configure()
+
+        // Cover art and posters load through AsyncImage, which leans on
+        // URLCache. The default memory budget is tiny, so thumbnails would
+        // re-fetch every time a row scrolls back into view.
+        URLCache.shared = URLCache(
+            memoryCapacity: 48 * 1024 * 1024,
+            diskCapacity: 256 * 1024 * 1024
+        )
+
         // Build the storage layer first — it's the source of truth.
         let storage = FileListStorage(baseDirectory: FileListStorage.defaultLocation())
         let repo = Repository(storage: storage)
@@ -97,6 +107,7 @@ struct AnyRankApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .tint(Theme.accent)
                 .environment(repository)
                 .environment(authSession)
                 .environment(syncCoordinator)
@@ -113,6 +124,9 @@ struct AnyRankApp: App {
                 .environment(\.musicService, musicService)
                 .task {
                     await repository.loadAll()
+                    #if DEBUG
+                    if DemoSeed.isRequested { DemoSeed.seedIfEmpty(repository) }
+                    #endif
                     await authSession.attemptSilentRestore()
                     await syncCoordinator.bootstrapIfReady()
                 }

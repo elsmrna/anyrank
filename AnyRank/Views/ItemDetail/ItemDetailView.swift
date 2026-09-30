@@ -20,75 +20,64 @@ struct ItemDetailView: View {
 
     var body: some View {
         Form {
-            Section {
-                HStack {
-                    BucketAccent(bucket: item.bucket)
-                        .frame(height: 32)
-                    VStack(alignment: .leading) {
-                        Text(item.bucket.displayName)
-                            .font(.subheadline.weight(.semibold))
-                        if item.shouldDisplayScore {
-                            Text(String(format: "%.1f", item.score))
-                                .font(.title2.bold())
-                                .monospacedDigit()
-                        } else {
-                            Text("Score appears once this bucket has 3 items")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+            Group {
+                Section {
+                    hero
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+
+                Section {
+                    TextField("Name", text: nameBinding)
+                        .font(.body.weight(.medium))
+                } header: {
+                    header("Name")
+                }
+
+                categoryMetadataSection
+
+                Section {
+                    Toggle(isOn: dateBinding.animation(Theme.spring)) {
+                        Label("Track date", systemImage: "calendar")
+                    }
+                    if item.dateConsumed != nil {
+                        DatePicker(
+                            "Date",
+                            selection: $dateConsumedDraft,
+                            displayedComponents: .date
+                        )
+                        .onChange(of: dateConsumedDraft) { _, newValue in
+                            item.dateConsumed = newValue
+                            repository.touch(list)
                         }
                     }
+                } header: {
+                    header(visitedHeader)
                 }
-            }
 
-            Section("Name") {
-                TextField("Name", text: nameBinding)
-            }
-
-            categoryMetadataSection
-
-            Section("Visited") {
-                Toggle("Track date", isOn: dateBinding)
-                if item.dateConsumed != nil {
-                    DatePicker(
-                        "Date",
-                        selection: $dateConsumedDraft,
-                        displayedComponents: .date
-                    )
-                    .onChange(of: dateConsumedDraft) { _, newValue in
-                        item.dateConsumed = newValue
-                        repository.touch(list)
-                    }
-                }
-            }
-
-            Section("Notes") {
-                TextEditor(text: notesBinding)
-                    .frame(minHeight: 100)
-            }
-
-            if let url = item.primaryURL {
                 Section {
-                    Link(destination: url) {
-                        Label("Open link", systemImage: "arrow.up.right.square")
+                    TextField("What stood out?", text: notesBinding, axis: .vertical)
+                        .lineLimit(4...12)
+                } header: {
+                    header("Notes")
+                }
+
+                Section {
+                    Button(role: .destructive) {
+                        deleteConfirmation = true
+                    } label: {
+                        Text("Delete from list")
+                            .frame(maxWidth: .infinity)
                     }
+                    .foregroundStyle(Theme.danger)
                 }
             }
-
-            Section {
-                Button {
-                    rerankPresented = true
-                } label: {
-                    Label("Re-rank this item", systemImage: "arrow.triangle.2.circlepath")
-                }
-
-                Button(role: .destructive) {
-                    deleteConfirmation = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            }
+            .listRowBackground(Theme.surface)
         }
-        .navigationTitle(item.name)
+        .tint(Theme.accent)
+        .themedList()
+        .scrollDismissesKeyboard(.interactively)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $rerankPresented) {
             RerankFlow(item: item, list: list)
@@ -105,31 +94,121 @@ struct ItemDetailView: View {
         }
     }
 
+    // MARK: Hero
+
+    private var hero: some View {
+        VStack(spacing: 14) {
+            if list.category.hasArtwork {
+                ArtworkView(
+                    urlString: RankingApplier.comparisonImageURLString(for: item, in: list),
+                    category: list.category,
+                    width: list.category.artworkAspectRatio == 1 ? 150 : 120,
+                    cornerRadius: 14
+                )
+                .shadow(color: .black.opacity(0.15), radius: 14, y: 6)
+            } else {
+                CategoryIconTile(category: list.category, size: 72)
+            }
+
+            VStack(spacing: 6) {
+                Text(item.name)
+                    .font(.display(.title))
+                    .foregroundStyle(Theme.textPrimary)
+                    .multilineTextAlignment(.center)
+                if let secondary = RankingApplier.comparisonSecondaryText(for: item, in: list) {
+                    Text(secondary)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+
+            HStack(spacing: 10) {
+                BucketTag(bucket: item.bucket)
+                if item.shouldDisplayScore {
+                    Text(String(format: "%.1f", item.score))
+                        .font(.score(.title2, weight: .bold))
+                        .foregroundStyle(item.bucket.ink)
+                }
+                if let rankLine {
+                    Text(rankLine)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            if !item.shouldDisplayScore {
+                Text("A score appears once \(item.bucket.displayName) has 3 items.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textTertiary)
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    rerankPresented = true
+                } label: {
+                    Label("Re-rank", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .buttonStyle(HeroActionStyle(prominent: true))
+                .labelStyle(TightLabelStyle())
+
+                if let url = item.primaryURL {
+                    Link(destination: url) {
+                        Label(linkLabel, systemImage: "arrow.up.right")
+                    }
+                    .buttonStyle(HeroActionStyle(prominent: false))
+                    .labelStyle(TightLabelStyle())
+                }
+            }
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+    }
+
+    private var rankLine: String? {
+        let sorted = list.itemsSortedByScore()
+        guard let index = sorted.firstIndex(where: { $0.id == item.id }) else { return nil }
+        return "#\(index + 1) of \(sorted.count)"
+    }
+
+    private var linkLabel: String {
+        switch list.category {
+        case .restaurants, .bars: return "Maps"
+        case .movies:             return "IMDb"
+        case .books:              return "StoryGraph"
+        case .anime:              return "AniList"
+        case .games:              return "IGDB"
+        case .albums, .songs:     return "Spotify"
+        case .custom:             return item.mapsURLString != nil ? "Maps" : "Open link"
+        }
+    }
+
+    private var visitedHeader: String {
+        switch list.category {
+        case .restaurants, .bars: return "Visited"
+        case .movies, .anime:     return "Watched"
+        case .books:              return "Read"
+        case .games:              return "Played"
+        case .albums, .songs:     return "Listened"
+        case .custom:             return "Date"
+        }
+    }
+
+    private func header(_ text: String) -> some View {
+        Text(text).foregroundStyle(Theme.textSecondary)
+    }
+
     @ViewBuilder
     private var categoryMetadataSection: some View {
         switch list.category {
         case .restaurants, .bars:
-            Section("Place") {
-                if let address = item.address {
-                    LabeledContent("Address", value: address)
-                }
-                if let url = item.mapsURLString {
-                    Text(url)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
+            // The address is already under the name in the hero, and the
+            // Maps button links out — nothing more to show here.
+            EmptyView()
         case .movies:
             Section("Movie") {
                 if let year = item.releaseYear {
                     LabeledContent("Year", value: String(year))
-                }
-                if let url = item.imdbURLString {
-                    Text(url)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
                 }
             }
         case .books:
@@ -143,12 +222,6 @@ struct ItemDetailView: View {
                 if let isbn = item.isbn {
                     LabeledContent("ISBN", value: isbn)
                 }
-                if let url = item.storyGraphURLString {
-                    Text(url)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
             }
         case .anime:
             Section("Anime") {
@@ -161,12 +234,6 @@ struct ItemDetailView: View {
                 if let eps = item.episodeCount {
                     LabeledContent("Episodes", value: String(eps))
                 }
-                if let url = item.aniListURLString {
-                    Text(url)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
             }
         case .games:
             Section("Game") {
@@ -176,12 +243,6 @@ struct ItemDetailView: View {
                 if let platforms = item.platforms, !platforms.isEmpty {
                     LabeledContent("Platforms", value: platforms.joined(separator: ", "))
                 }
-                if let url = item.igdbURLString {
-                    Text(url)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
             }
         case .albums:
             Section("Album") {
@@ -190,12 +251,6 @@ struct ItemDetailView: View {
                 }
                 if let year = item.releaseYear {
                     LabeledContent("Year", value: String(year))
-                }
-                if let url = item.spotifyURLString {
-                    Text(url)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
                 }
             }
         case .songs:
@@ -214,12 +269,6 @@ struct ItemDetailView: View {
                     let secs = duration % 60
                     LabeledContent("Length", value: String(format: "%d:%02d", mins, secs))
                 }
-                if let url = item.spotifyURLString {
-                    Text(url)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
             }
         case .custom:
             // Maps-linked custom lists show the same Place section as
@@ -227,17 +276,6 @@ struct ItemDetailView: View {
             // picker, not free-form entry, so they read as static facts
             // rather than editable fields.
             if list.linksToMapsLocation {
-                Section("Place") {
-                    if let address = item.address {
-                        LabeledContent("Address", value: address)
-                    }
-                    if let url = item.mapsURLString {
-                        Text(url)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                }
                 if !list.customFieldNames.isEmpty {
                     Section("Custom fields") {
                         ForEach(list.customFieldNames, id: \.self) { field in
@@ -315,6 +353,23 @@ struct ItemDetailView: View {
     private func performDelete() {
         RankingApplier.delete(item: item, from: list, repository: repository)
         dismiss()
+    }
+}
+
+/// Capsule action under the item hero — prominent (terracotta) or quiet.
+private struct HeroActionStyle: ButtonStyle {
+    let prominent: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(prominent ? Theme.onAccent : Theme.textPrimary)
+            .padding(.horizontal, 18)
+            .frame(height: 40)
+            .background(prominent ? Theme.accent : Theme.surface, in: Capsule())
+            .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: prominent ? 0 : 0.5))
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(Theme.press, value: configuration.isPressed)
     }
 }
 

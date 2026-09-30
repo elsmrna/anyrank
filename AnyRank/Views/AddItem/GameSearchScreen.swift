@@ -1,64 +1,22 @@
 import SwiftUI
 
-/// Game search. Mirrors `BookSearchScreen`/`AnimeSearchScreen` in shape.
-/// Secondary text shows platforms (truncated to 3, with "+N more" hint)
-/// and release year — usually enough to disambiguate remasters, DLC
-/// versions, and multi-platform titles.
+/// Game search. Secondary text shows platforms (truncated to 3, with a
+/// "+N more" hint) and release year — usually enough to disambiguate
+/// remasters, DLC versions, and multi-platform titles.
 struct GameSearchScreen: View {
     let onIdentified: (StagedItem) -> Void
 
     @Environment(\.gameService) private var service
 
-    @State private var query: String = ""
-    @State private var results: [GameSearchResult] = []
-    @State private var isSearching = false
-    @State private var errorMessage: String?
-    @FocusState private var searchFieldFocused: Bool
-
     var body: some View {
-        List {
-            Section {
-                TextField("Search games", text: $query)
-                    .textFieldStyle(.plain)
-                    .textInputAutocapitalization(.words)
-                    .focused($searchFieldFocused)
-                    .onChange(of: query) { _, newValue in
-                        Task { await runSearch(newValue) }
-                    }
-                    .onAppear {
-                        searchFieldFocused = true
-                        Task { await runSearch("") }
-                    }
-            }
-
-            if isSearching {
-                Section { ProgressView().frame(maxWidth: .infinity) }
-            } else if let errorMessage {
-                Section { Text(errorMessage).foregroundStyle(.red) }
-            } else {
-                Section {
-                    ForEach(results) { result in
-                        Button {
-                            select(result)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(result.name)
-                                let secondary = secondaryText(for: result)
-                                if !secondary.isEmpty {
-                                    Text(secondary)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-        }
+        CatalogSearchScreen(
+            prompt: "Search games",
+            category: .games,
+            emptyHint: "Search by title",
+            search: { try await service.search(query: $0) },
+            row: { SearchRowContent(title: $0.name, subtitle: secondaryText(for: $0), imageURL: $0.coverURL) },
+            onSelect: select
+        )
     }
 
     private func secondaryText(for result: GameSearchResult) -> String {
@@ -77,18 +35,6 @@ struct GameSearchScreen: View {
         let shown = platforms.prefix(3).joined(separator: ", ")
         let remaining = platforms.count - 3
         return remaining > 0 ? "\(shown) +\(remaining) more" : shown
-    }
-
-    private func runSearch(_ query: String) async {
-        isSearching = true
-        errorMessage = nil
-        do {
-            results = try await service.search(query: query)
-        } catch {
-            errorMessage = error.localizedDescription
-            results = []
-        }
-        isSearching = false
     }
 
     private func select(_ result: GameSearchResult) {

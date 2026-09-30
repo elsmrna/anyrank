@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// One of the four sentiment buckets. Each bucket has a fixed score range;
 /// final item scores are interpolated within the bucket's range based on
@@ -33,15 +32,7 @@ enum Bucket: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Color accent shown in the list view to indicate sentiment without a number.
-    var color: Color {
-        switch self {
-        case .loved: return .green
-        case .liked: return .blue
-        case .fine: return .yellow
-        case .didntLike: return .red
-        }
-    }
+    // Visual styling (color, ink, symbol, blurb) lives in Design/Theme.swift.
 
     /// Buckets ordered from highest sentiment to lowest. Index 0 is "best".
     static var orderedHighToLow: [Bucket] { [.loved, .liked, .fine, .didntLike] }

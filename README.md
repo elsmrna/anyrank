@@ -57,7 +57,7 @@ Live Books search runs against Open Library (keyless, generous rate limits) with
 
 Google Sheets sync ships as an opt-in toggle in Settings (off by default — sign-in alone identifies the user but doesn't move data off the device). When enabled, the app requests Drive/Sheets scopes, creates an "AnyRank Data" spreadsheet, and pushes one tab per list. See `issues/closed/google-oauth-sheets-sync.md` for the design notes.
 
-Also deferred: app icon, color palette polish, educational onboarding walkthrough, JSON export. See `issues/` for the tracked items and `Spec.md` "Open TBDs" for the full list.
+Also deferred: educational onboarding walkthrough, JSON export. (The visual design system — palette, type, icon — is in place; see `BUILD_NOTES.md` § Visual design.) See `issues/` for the tracked items and `Spec.md` "Open TBDs" for the full list.
 
 ## Where to look first
 
