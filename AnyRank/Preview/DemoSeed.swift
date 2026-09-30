@@ -13,6 +13,10 @@ enum DemoSeed {
     static func seedIfEmpty(_ repository: Repository) {
         guard repository.lists.isEmpty else { return }
         let sources = [
+            PreviewSupport.customMapsLinkedRepository(),
+            PreviewSupport.songsRepository(),
+            PreviewSupport.gamesRepository(),
+            PreviewSupport.animeRepository(),
             PreviewSupport.booksRepository(),
             PreviewSupport.multipleListsRepository(),
             PreviewSupport.fullRestaurantsRepository(),

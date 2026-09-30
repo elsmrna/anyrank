@@ -1,6 +1,9 @@
 import SwiftUI
 
-/// Detail and edit screen for a single item.
+/// Detail screen for a single item. Facts that came from a catalog (year,
+/// author, platforms…) are shown read-only in the hero; only things the
+/// user authored — dates, notes, and a custom list's own fields — are
+/// editable below it.
 struct ItemDetailView: View {
     let item: RankItem
     let list: RankList
@@ -27,14 +30,7 @@ struct ItemDetailView: View {
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
 
-                Section {
-                    TextField("Name", text: nameBinding)
-                        .font(.body.weight(.medium))
-                } header: {
-                    header("Name")
-                }
-
-                categoryMetadataSection
+                customDetailsSection
 
                 Section {
                     Toggle(isOn: dateBinding.animation(Theme.spring)) {
@@ -79,6 +75,16 @@ struct ItemDetailView: View {
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                // Text rather than an icon: the circular-arrows glyph alone
+                // doesn't say "re-rank", and this is the screen's key action.
+                Button("Re-rank") {
+                    rerankPresented = true
+                }
+                .fontWeight(.semibold)
+            }
+        }
         .sheet(isPresented: $rerankPresented) {
             RerankFlow(item: item, list: list)
         }
@@ -115,10 +121,16 @@ struct ItemDetailView: View {
                     .font(.display(.title))
                     .foregroundStyle(Theme.textPrimary)
                     .multilineTextAlignment(.center)
-                if let secondary = RankingApplier.comparisonSecondaryText(for: item, in: list) {
-                    Text(secondary)
-                        .font(.subheadline)
+                if let subtitle = heroSubtitle {
+                    Text(subtitle)
+                        .font(.body)
                         .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                if !heroFacts.isEmpty {
+                    Text(heroFacts.joined(separator: "  ·  "))
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textTertiary)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -142,24 +154,14 @@ struct ItemDetailView: View {
                     .foregroundStyle(Theme.textTertiary)
             }
 
-            HStack(spacing: 10) {
-                Button {
-                    rerankPresented = true
-                } label: {
-                    Label("Re-rank", systemImage: "arrow.triangle.2.circlepath")
+            if let url = item.primaryURL {
+                Link(destination: url) {
+                    Label("Open in \(linkLabel)", systemImage: "arrow.up.right")
                 }
-                .buttonStyle(HeroActionStyle(prominent: true))
+                .buttonStyle(HeroActionStyle())
                 .labelStyle(TightLabelStyle())
-
-                if let url = item.primaryURL {
-                    Link(destination: url) {
-                        Label(linkLabel, systemImage: "arrow.up.right")
-                    }
-                    .buttonStyle(HeroActionStyle(prominent: false))
-                    .labelStyle(TightLabelStyle())
-                }
+                .padding(.top, 4)
             }
-            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 8)
@@ -179,7 +181,7 @@ struct ItemDetailView: View {
         case .anime:              return "AniList"
         case .games:              return "IGDB"
         case .albums, .songs:     return "Spotify"
-        case .custom:             return item.mapsURLString != nil ? "Maps" : "Open link"
+        case .custom:             return item.mapsURLString != nil ? "Maps" : "browser"
         }
     }
 
@@ -198,103 +200,82 @@ struct ItemDetailView: View {
         Text(text).foregroundStyle(Theme.textSecondary)
     }
 
-    @ViewBuilder
-    private var categoryMetadataSection: some View {
+    // MARK: Facts
+
+    /// Who made it / where it is — the most identifying fact after the name.
+    private var heroSubtitle: String? {
+        let value: String?
         switch list.category {
-        case .restaurants, .bars:
-            // The address is already under the name in the hero, and the
-            // Maps button links out — nothing more to show here.
-            EmptyView()
-        case .movies:
-            Section("Movie") {
-                if let year = item.releaseYear {
-                    LabeledContent("Year", value: String(year))
-                }
-            }
-        case .books:
-            Section("Book") {
-                if let author = item.author {
-                    LabeledContent("Author", value: author)
-                }
-                if let year = item.releaseYear {
-                    LabeledContent("Published", value: String(year))
-                }
-                if let isbn = item.isbn {
-                    LabeledContent("ISBN", value: isbn)
-                }
-            }
+        case .restaurants, .bars, .custom: value = item.address
+        case .books:                       value = item.author
+        case .albums, .songs:              value = item.artist
+        case .movies, .anime, .games:      value = nil
+        }
+        return value.flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// Smaller supporting facts, joined into one line under the subtitle.
+    private var heroFacts: [String] {
+        var facts: [String] = []
+        switch list.category {
+        case .songs:
+            if let album = item.albumTitle, !album.isEmpty { facts.append(album) }
         case .anime:
-            Section("Anime") {
-                if let format = item.animeFormat {
-                    LabeledContent("Format", value: format.capitalized)
-                }
-                if let year = item.releaseYear {
-                    LabeledContent("Year", value: String(year))
-                }
-                if let eps = item.episodeCount {
-                    LabeledContent("Episodes", value: String(eps))
-                }
+            if let format = item.animeFormat, !format.isEmpty {
+                facts.append(format.count <= 3 ? format.uppercased() : format.capitalized)
             }
+        default:
+            break
+        }
+        if let year = item.releaseYear { facts.append(String(year)) }
+        switch list.category {
+        case .anime:
+            if let eps = item.episodeCount, eps > 1 { facts.append("\(eps) episodes") }
         case .games:
-            Section("Game") {
-                if let year = item.releaseYear {
-                    LabeledContent("Year", value: String(year))
-                }
-                if let platforms = item.platforms, !platforms.isEmpty {
-                    LabeledContent("Platforms", value: platforms.joined(separator: ", "))
-                }
-            }
-        case .albums:
-            Section("Album") {
-                if let artist = item.artist {
-                    LabeledContent("Artist", value: artist)
-                }
-                if let year = item.releaseYear {
-                    LabeledContent("Year", value: String(year))
-                }
+            if let platforms = item.platforms, !platforms.isEmpty {
+                facts.append(platforms.joined(separator: ", "))
             }
         case .songs:
-            Section("Song") {
-                if let artist = item.artist {
-                    LabeledContent("Artist", value: artist)
-                }
-                if let album = item.albumTitle {
-                    LabeledContent("Album", value: album)
-                }
-                if let year = item.releaseYear {
-                    LabeledContent("Year", value: String(year))
-                }
-                if let duration = item.durationSeconds {
-                    let mins = duration / 60
-                    let secs = duration % 60
-                    LabeledContent("Length", value: String(format: "%d:%02d", mins, secs))
-                }
+            if let duration = item.durationSeconds {
+                facts.append(String(format: "%d:%02d", duration / 60, duration % 60))
             }
-        case .custom:
-            // Maps-linked custom lists show the same Place section as
-            // Restaurants/Bars — the address and Maps URL came from the
-            // picker, not free-form entry, so they read as static facts
-            // rather than editable fields.
-            if list.linksToMapsLocation {
-                if !list.customFieldNames.isEmpty {
-                    Section("Custom fields") {
-                        ForEach(list.customFieldNames, id: \.self) { field in
-                            TextField(field, text: customFieldBinding(field))
-                        }
-                    }
-                }
-            } else {
-                Section("Details") {
+        default:
+            break
+        }
+        return facts
+    }
+
+    // MARK: Custom lists
+
+    /// Custom lists are the one place the item's details are the user's
+    /// own writing rather than catalog facts, so they stay editable.
+    /// Maps-linked custom items take their name and address from Maps, so
+    /// only the user-defined fields are editable there.
+    @ViewBuilder
+    private var customDetailsSection: some View {
+        if list.category == .custom {
+            if !list.linksToMapsLocation {
+                Section {
+                    TextField("Name", text: nameBinding)
+                        .font(.body.weight(.medium))
                     TextField("Link", text: customLinkBinding)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-
-                    if !list.customFieldNames.isEmpty {
-                        ForEach(list.customFieldNames, id: \.self) { field in
+                } header: {
+                    header("Details")
+                }
+            }
+            if !list.customFieldNames.isEmpty {
+                Section {
+                    ForEach(list.customFieldNames, id: \.self) { field in
+                        LabeledContent(field) {
                             TextField(field, text: customFieldBinding(field))
+                                .multilineTextAlignment(.trailing)
                         }
                     }
+                } header: {
+                    header(list.linksToMapsLocation ? "Details" : "Fields")
                 }
             }
         }
@@ -356,18 +337,16 @@ struct ItemDetailView: View {
     }
 }
 
-/// Capsule action under the item hero — prominent (terracotta) or quiet.
+/// Quiet capsule for the outbound link under the item hero.
 private struct HeroActionStyle: ButtonStyle {
-    let prominent: Bool
-
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(prominent ? Theme.onAccent : Theme.textPrimary)
+            .foregroundStyle(Theme.textPrimary)
             .padding(.horizontal, 18)
             .frame(height: 40)
-            .background(prominent ? Theme.accent : Theme.surface, in: Capsule())
-            .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: prominent ? 0 : 0.5))
+            .background(Theme.surface, in: Capsule())
+            .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 0.5))
             .scaleEffect(configuration.isPressed ? 0.96 : 1)
             .animation(Theme.press, value: configuration.isPressed)
     }
