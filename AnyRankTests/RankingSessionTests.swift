@@ -206,13 +206,12 @@ final class RankingSessionTests: XCTestCase {
 
     // MARK: Comparison cap + tie-break
 
+    /// 100-item Fine bucket with the cap at 5, so bisection can't converge.
+    /// New wins every bisection round: hi shrinks 100 → 50 → 25 → 12 → 6 → 3,
+    /// leaving the unresolved range [0, 3). With randomSource() = 0.5 the
+    /// tie-break index is 0 + Int(0.5 * 3) = 1.
     @MainActor
-    func test_capHit_tiesBreakWithRandomMidpoint() {
-        // 100-item bucket: log2(100) ≈ 6.6, so cap of 5 will not converge.
-        // Drive 5 binary-search comparisons that always favor new (each
-        // winning cuts hi in half). After 5 cuts, lo=0, hi=4. Tie-break runs
-        // against a random index in [0, 4); with randomSource() = 0.5, the
-        // chosen index is min(3, max(0, Int(0.5 * 4))) = 2.
+    private func sessionAtTieBreak() -> (RankingSession, UUID) {
         var refs: [RankingSession.ItemRef] = []
         for i in 0..<100 { refs.append(.init(id: UUID(), name: "I\(i)")) }
         let snap = snapshot([(.fine, refs)])
@@ -224,27 +223,39 @@ final class RankingSessionTests: XCTestCase {
             randomSource: { 0.5 }
         )
         session.selectBucket(.fine)
-
-        // Run 5 comparisons, new always wins.
         for _ in 0..<5 {
             guard case .askingComparison(_, .binarySearch) = session.state else {
-                return XCTFail("Expected binary search comparison")
+                XCTFail("Expected binary search comparison")
+                return (session, newID)
             }
             session.answerComparison(winner: newID)
         }
+        return (session, newID)
+    }
 
-        // Now we should be at tie-break. The opponent should be the item at
-        // index loIndex + 2 = 2 (because randomSource = 0.5, span = 4).
+    @MainActor
+    func test_capHit_tiesBreakWithRandomMidpoint() {
+        let (session, newID) = sessionAtTieBreak()
         guard case .askingComparison(let opp, .tieBreak) = session.state else {
             return XCTFail("Expected tie-break, got \(session.state)")
         }
-        XCTAssertEqual(opp.name, "I2")
+        XCTAssertEqual(opp.name, "I1")
 
-        // If new wins tie-break, hiIndex = 2, loIndex = 0. Settles to lo = 0.
-        // Position 0 = top of Fine bucket. Boundary check upward into Liked
-        // (which is empty) — no items there, so finalize.
+        // Spec § 4 step four: winning the tie-break places the new item
+        // immediately above I1 — between I0 and I1 — not above I0, which it
+        // was never compared against. Mid-bucket, so no boundary check.
         session.answerComparison(winner: newID)
-        assertFinished(session, bucket: .fine, rank: 0)
+        assertFinished(session, bucket: .fine, rank: 1, comparisonCount: 6)
+    }
+
+    @MainActor
+    func test_capHit_losingTieBreakPlacesImmediatelyBelow() {
+        let (session, _) = sessionAtTieBreak()
+        guard case .askingComparison(let opp, .tieBreak) = session.state else {
+            return XCTFail("Expected tie-break, got \(session.state)")
+        }
+        session.answerComparison(winner: opp.id)
+        assertFinished(session, bucket: .fine, rank: 2, comparisonCount: 6)
     }
 
     // MARK: Score interpolation

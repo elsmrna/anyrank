@@ -214,12 +214,14 @@ final class RankingSession {
                 loserItemID: loserID,
                 kind: .tieBreak
             ))
-            // Resolve the unresolved range using the tie-break midpoint.
-            if newWon {
-                hiIndex = midIndex
-            } else {
-                loIndex = midIndex + 1
-            }
+            // Spec § 4 step four: place the new item immediately above
+            // (won) or immediately below (lost) the tie-break opponent.
+            // Collapse the range to that single point — leaving `loIndex`
+            // alone on a win would place the item above everything in the
+            // unresolved range, including items it was never compared to.
+            let insertion = newWon ? midIndex : midIndex + 1
+            loIndex = insertion
+            hiIndex = insertion
             // Tie-break collapses ambiguity. Move on to boundary check.
             advanceAfterBinarySearchSettled()
 
