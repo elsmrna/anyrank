@@ -107,6 +107,12 @@ final class IMDbImportTests: XCTestCase {
         XCTAssertNil(items[0].suggestedBucket)
     }
 
+    func test_exportDatesKeepTheirCalendarDay() throws {
+        let date = try XCTUnwrap(FileImporters.parseDate("2024-03-02"))
+        let parts = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        XCTAssertEqual([parts.year, parts.month, parts.day], [2024, 3, 2])
+    }
+
     func test_tenPointBuckets() {
         XCTAssertEqual(FileImporters.bucket(forTenPoint: 10), .loved)
         XCTAssertEqual(FileImporters.bucket(forTenPoint: 9), .loved)

@@ -321,7 +321,10 @@ enum FileImporters {
         for format in ["yyyy-MM-dd", "yyyy/MM/dd"] {
             let formatter = DateFormatter()
             formatter.locale = Locale(identifier: "en_US_POSIX")
-            formatter.timeZone = TimeZone(identifier: "UTC")
+            // Exports give calendar dates ("2024-03-02"), not instants. Read
+            // them in the user's time zone so they display as the same day;
+            // UTC midnight shows as the previous evening west of Greenwich.
+            formatter.timeZone = .current
             formatter.dateFormat = format
             if let date = formatter.date(from: String(raw.prefix(10))) { return date }
         }
