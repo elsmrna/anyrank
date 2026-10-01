@@ -24,6 +24,12 @@ struct ImportEnricher {
         do {
             switch item.category {
             case .movies where item.movie == nil:
+                // An IMDb ID means an exact match — no title guessing.
+                if let imdbID = item.imdbID {
+                    guard let hit = try await movies.lookup(imdbID: imdbID) else { return nil }
+                    updated.movie = hit
+                    break
+                }
                 let results = try await movies.search(query: item.name)
                 guard let hit = results.first(where: {
                     ImportMatcher.normalize($0.title) == name && yearsAgree($0.releaseYear, item.fallbackYear)

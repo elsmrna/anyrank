@@ -111,6 +111,9 @@ enum ImportMatcher {
         init(staged: StagedItem) {
             name = ImportMatcher.normalize(staged.name)
             if let url = staged.sourceURL { strongKeys.insert("src:\(url.absoluteString)") }
+            if let imdb = staged.imdbID ?? staged.movie?.imdbURL.flatMap({ Self.imdbID(in: $0.absoluteString) }) {
+                strongKeys.insert("imdb:\(imdb)")
+            }
             if let place = staged.place {
                 strongKeys.insert("place:\(place.id)")
                 qualifier = ImportMatcher.normalize(place.address)
@@ -144,6 +147,7 @@ enum ImportMatcher {
             if let placeID = item.placeID { strongKeys.insert("place:\(placeID)") }
             if let address = item.address { qualifier = ImportMatcher.normalize(address) }
             if let tmdb = item.tmdbID, tmdb > 0 { strongKeys.insert("tmdb:\(tmdb)") }
+            if let imdb = item.imdbURLString.flatMap(Self.imdbID(in:)) { strongKeys.insert("imdb:\(imdb)") }
             if let isbn = item.isbn.flatMap(Self.isbnKey) { strongKeys.insert(isbn) }
             if let url = item.spotifyURLString { strongKeys.insert("spotify:\(url)") }
         }
@@ -154,6 +158,12 @@ enum ImportMatcher {
             if let a = year, let b = other.year, abs(a - b) > 1 { return false }
             if let a = qualifier, let b = other.qualifier, !a.isEmpty, !b.isEmpty, a != b { return false }
             return true
+        }
+
+        /// `tt1375666` from an IMDb URL or bare ID.
+        static func imdbID(in text: String) -> String? {
+            guard let range = text.range(of: #"tt\d{6,}"#, options: .regularExpression) else { return nil }
+            return String(text[range])
         }
 
         private static func isbnKey(_ raw: String) -> String? {

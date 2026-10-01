@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -87,8 +88,18 @@ struct ImportFlowView: View {
         switch draft.source {
         case .steam:
             SteamInputScreen(onLoaded: loaded)
-        case .letterboxd, .goodreads, .storyGraph:
-            FileInputScreen(source: draft.source, onLoaded: loaded)
+        case .letterboxd, .imdb, .goodreads, .storyGraph:
+            FileInputScreen(source: draft.source, fixedCategory: targetList?.category) { candidates, detected in
+                // The file may be from a different service than the one
+                // picked; follow the file.
+                if detected != draft.source {
+                    if draft.newListName == draft.source.defaultListName {
+                        draft.newListName = detected.defaultListName
+                    }
+                    draft.source = detected
+                }
+                loaded(candidates)
+            }
         case .pastedList:
             PasteInputScreen(draft: draft, categoryIsFixed: targetList != nil, onLoaded: loaded)
         }
@@ -168,17 +179,95 @@ private struct SteamInputScreen: View {
     let onLoaded: ([ImportCandidate]) -> Void
 
     @Environment(\.steamLibraryService) private var steam
+    @Environment(\.webAuthenticationSession) private var webAuthentication
     @AppStorage("import.steamProfile") private var profile = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var libraryIsPrivate = false
+    @State private var showingProfileField = false
     @FocusState private var focused: Bool
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                InputHeader(source: .steam, detail: "We'll read the games you own and queue them up, most-played first.")
+                InputHeader(source: .steam, detail: "Sign in with Steam and we'll queue up every game you own, most-played first. AnyRank only sees your game list — never your password.")
 
-                VStack(alignment: .leading, spacing: 8) {
+                privacyNote
+
+                if let errorMessage {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ErrorText(errorMessage)
+                        if libraryIsPrivate {
+                            Link(destination: SteamSignIn.privacySettingsURL) {
+                                Label("Open Steam privacy settings", systemImage: "safari")
+                            }
+                            .font(.subheadline.weight(.semibold))
+                        }
+                    }
+                }
+
+                profileFallback
+
+                if steam.isSample {
+                    Label("This build has no Steam Web API key (a one-time developer setting, not something you need), so it imports a sample library.", systemImage: "info.circle")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Theme.surfaceMuted, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+            .padding(.horizontal, Theme.gutter)
+            .padding(.bottom, 16)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom) {
+            Button(action: signIn) {
+                if isLoading {
+                    ProgressView().tint(Theme.onAccent)
+                } else {
+                    Text("Sign in with Steam")
+                }
+            }
+            .buttonStyle(.primary)
+            .disabled(isLoading)
+            .padding(.horizontal, Theme.gutter)
+            .padding(.vertical, 8)
+            .background(Theme.background)
+        }
+    }
+
+    private var privacyNote: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "lock.open")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Theme.olive)
+                .frame(width: 32, height: 32)
+                .background(Theme.olive.opacity(0.14), in: Circle())
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Your game list needs to be public")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                Text("Steam only shares libraries when Privacy Settings → Game details is set to Public. You can switch it back after importing.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Link("Check my Steam privacy settings", destination: SteamSignIn.privacySettingsURL)
+                    .font(.footnote.weight(.semibold))
+                    .padding(.top, 2)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .card()
+    }
+
+    /// For people who'd rather paste a profile link than sign in.
+    @ViewBuilder
+    private var profileFallback: some View {
+        if showingProfileField {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
                     TextField("steamcommunity.com/id/yourname", text: $profile)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -186,51 +275,72 @@ private struct SteamInputScreen: View {
                         .submitLabel(.go)
                         .focused($focused)
                         .onSubmit(fetch)
-                        .padding(.horizontal, 14)
-                        .frame(height: 50)
-                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 0.5))
-                    Text("Your profile URL, custom URL name, or SteamID. Your profile's Game details must be set to Public.")
-                        .font(.footnote)
-                        .foregroundStyle(Theme.textSecondary)
+                    if !profile.isEmpty {
+                        Button {
+                            profile = ""
+                            focused = true
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(Theme.textTertiary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Clear profile link")
+                    }
+                    Button("Go", action: fetch)
+                        .font(.subheadline.weight(.semibold))
+                        .disabled(isLoading || profile.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
-
-                if steam.isSample {
-                    Label("No Steam Web API key is configured in this build, so this imports a sample library.", systemImage: "info.circle")
-                        .font(.footnote)
-                        .foregroundStyle(Theme.textSecondary)
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Theme.surfaceMuted, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
-
-                if let errorMessage {
-                    ErrorText(errorMessage)
-                }
+                .padding(.horizontal, 14)
+                .frame(height: 50)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 0.5))
+                Text("Your profile URL, custom URL name, or SteamID.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
             }
-            .padding(.horizontal, Theme.gutter)
-        }
-        .safeAreaInset(edge: .bottom) {
-            Button(action: fetch) {
-                if isLoading {
-                    ProgressView().tint(Theme.onAccent)
-                } else {
-                    Text("Get my library")
-                }
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        } else {
+            Button {
+                withAnimation(Theme.spring) { showingProfileField = true }
+                focused = true
+            } label: {
+                Text("Use a profile link instead")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.primary)
-            .disabled(isLoading || profile.trimmingCharacters(in: .whitespaces).isEmpty)
-            .padding(.horizontal, Theme.gutter)
-            .padding(.vertical, 8)
-            .background(Theme.background)
+            .padding(.top, 4)
         }
-        .onAppear { focused = profile.isEmpty }
+    }
+
+    private func signIn() {
+        errorMessage = nil
+        Task {
+            do {
+                let callback = try await webAuthentication.authenticate(
+                    using: SteamSignIn.loginURL,
+                    callback: .customScheme(SteamSignIn.callbackScheme),
+                    preferredBrowserSession: .shared,
+                    additionalHeaderFields: [:]
+                )
+                guard let steamID = SteamSignIn.steamID(fromCallback: callback) else {
+                    errorMessage = "Steam sign-in didn't finish. Try again, or use a profile link instead."
+                    return
+                }
+                profile = steamID
+                fetch()
+            } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
+                // User closed the sheet — nothing to say.
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     private func fetch() {
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
+        libraryIsPrivate = false
         focused = false
         Task {
             defer { isLoading = false }
@@ -238,6 +348,7 @@ private struct SteamInputScreen: View {
                 let games = try await steam.ownedGames(profile: profile)
                 onLoaded(SteamImport.candidates(from: games))
             } catch {
+                libraryIsPrivate = (error as? SteamImportError) == .privateLibrary
                 errorMessage = error.localizedDescription
             }
         }
@@ -248,18 +359,23 @@ private struct SteamInputScreen: View {
 
 private struct FileInputScreen: View {
     let source: ImportSourceKind
-    let onLoaded: ([ImportCandidate]) -> Void
+    /// Set when importing into an existing list; a file for another
+    /// category is rejected with an explanation.
+    let fixedCategory: Category?
+    let onLoaded: ([ImportCandidate], ImportSourceKind) -> Void
 
     @State private var choosingFile = false
     @State private var errorMessage: String?
 
+    private var guide: ExportGuide { ExportGuide.for(source) }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                InputHeader(source: source, detail: detail)
+                InputHeader(source: source, detail: guide.detail)
 
-                VStack(alignment: .leading, spacing: 12) {
-                    ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(Array(guide.steps.enumerated()), id: \.offset) { index, step in
                         HStack(alignment: .firstTextBaseline, spacing: 12) {
                             Text("\(index + 1)")
                                 .font(.score(.footnote, weight: .bold))
@@ -272,54 +388,43 @@ private struct FileInputScreen: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
+                    ForEach(guide.links, id: \.url) { link in
+                        Link(destination: link.url) {
+                            Label(link.title, systemImage: "safari")
+                                .font(.subheadline.weight(.semibold))
+                                .labelStyle(TightLabelStyle())
+                                .foregroundStyle(Theme.textPrimary)
+                                .padding(.horizontal, 14)
+                                .frame(height: 38)
+                                .background(Theme.surfaceMuted, in: Capsule())
+                        }
+                    }
+                    .padding(.leading, 36)
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .card()
+
+                Label("Downloads land in the Files app, under Downloads. Come back here when you have the file.", systemImage: "folder")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
 
                 if let errorMessage {
                     ErrorText(errorMessage)
                 }
             }
             .padding(.horizontal, Theme.gutter)
+            .padding(.bottom, 16)
         }
         .safeAreaInset(edge: .bottom) {
-            Button("Choose CSV file") { choosingFile = true }
+            Button(guide.pickTitle) { choosingFile = true }
                 .buttonStyle(.primary)
                 .padding(.horizontal, Theme.gutter)
                 .padding(.vertical, 8)
                 .background(Theme.background)
         }
-        .fileImporter(isPresented: $choosingFile, allowedContentTypes: [.commaSeparatedText, .plainText, .text]) { result in
+        .fileImporter(isPresented: $choosingFile, allowedContentTypes: [.commaSeparatedText, .zip, .plainText, .text]) { result in
             load(result)
-        }
-    }
-
-    private var detail: String {
-        switch source {
-        case .letterboxd: return "Every film you've logged, highest-rated first. Your star ratings show up as suggestions while you rank."
-        case .goodreads:  return "Books on your Read shelf, highest-rated first. Your star ratings show up as suggestions while you rank."
-        case .storyGraph: return "Books you've finished, highest-rated first. Your star ratings show up as suggestions while you rank."
-        default:          return ""
-        }
-    }
-
-    private var steps: [String] {
-        switch source {
-        case .letterboxd:
-            return ["On letterboxd.com, open Settings → Import & Export.",
-                    "Tap Export your data and unzip the download.",
-                    "Choose diary.csv, ratings.csv, or watched.csv."]
-        case .goodreads:
-            return ["On goodreads.com, open My Books → Import and export.",
-                    "Tap Export Library and download the file.",
-                    "Choose the goodreads_library_export.csv file."]
-        case .storyGraph:
-            return ["On thestorygraph.com, open Manage Account.",
-                    "Tap Export StoryGraph Library and download the file.",
-                    "Choose the exported .csv file."]
-        default:
-            return []
         }
     }
 
@@ -329,12 +434,84 @@ private struct FileInputScreen: View {
             let url = try result.get()
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            let data = try Data(contentsOf: url)
-            let text = String(decoding: data, as: UTF8.self)
-            let candidates = try FileImporters.candidates(from: text, source: source, category: source.category ?? .custom)
-            onLoaded(candidates)
+            let files = try FileImporters.ImportFile.load(from: url)
+            let detected = FileImporters.detect(files) ?? source
+            if let fixedCategory, let category = detected.category, category != fixedCategory {
+                throw FileImporters.ParseError.wrongCategory(source: detected, listCategory: fixedCategory)
+            }
+            let candidates = try FileImporters.candidates(from: files, source: detected, category: detected.category ?? .custom)
+            onLoaded(candidates, detected)
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+}
+
+/// How to get an export out of each service, written for doing it on a
+/// phone: open the page in Safari, export, come back and pick the file.
+struct ExportGuide {
+    struct Destination: Hashable {
+        let title: String
+        let url: URL
+    }
+
+    let detail: String
+    let steps: [String]
+    let links: [Destination]
+    let pickTitle: String
+
+    static func `for`(_ source: ImportSourceKind) -> ExportGuide {
+        switch source {
+        case .letterboxd:
+            return ExportGuide(
+                detail: "Every film you've logged, highest-rated first. Your star ratings show up as suggestions while you rank.",
+                steps: [
+                    "Open your Letterboxd data page and sign in if asked.",
+                    "Tap Export Your Data. Safari downloads a .zip — no need to unzip it.",
+                    "Come back and choose that .zip (or any CSV from inside it).",
+                ],
+                links: [Destination(title: "Open Letterboxd export", url: URL(string: "https://letterboxd.com/settings/data/")!)],
+                pickTitle: "Choose export file"
+            )
+        case .imdb:
+            return ExportGuide(
+                detail: "Films you've rated, highest first, with posters matched exactly by IMDb ID. Exported lists and your watchlist work too.",
+                steps: [
+                    "Open your IMDb ratings and sign in if asked.",
+                    "Tap the ⋯ menu (or the export icon) and choose Export.",
+                    "IMDb prepares the file in a minute or two. Open Your exports and download it when it's ready.",
+                    "Come back and choose the .csv.",
+                ],
+                links: [
+                    Destination(title: "Open my IMDb ratings", url: URL(string: "https://www.imdb.com/list/ratings")!),
+                    Destination(title: "Open IMDb exports", url: URL(string: "https://www.imdb.com/exports/")!),
+                ],
+                pickTitle: "Choose CSV file"
+            )
+        case .goodreads:
+            return ExportGuide(
+                detail: "Books on your Read shelf, highest-rated first. Your star ratings show up as suggestions while you rank.",
+                steps: [
+                    "Open Goodreads' import/export page and sign in if asked.",
+                    "Tap Export Library. When the download link appears under the button, tap it.",
+                    "Come back and choose the .csv.",
+                ],
+                links: [Destination(title: "Open Goodreads export", url: URL(string: "https://www.goodreads.com/review/import")!)],
+                pickTitle: "Choose CSV file"
+            )
+        case .storyGraph:
+            return ExportGuide(
+                detail: "Books you've finished, highest-rated first. Your star ratings show up as suggestions while you rank.",
+                steps: [
+                    "Open StoryGraph's export page and sign in if asked.",
+                    "Tap Generate export. It can take a minute — refresh until the download link appears, then tap it.",
+                    "Come back and choose the .csv.",
+                ],
+                links: [Destination(title: "Open StoryGraph export", url: URL(string: "https://app.thestorygraph.com/user-export")!)],
+                pickTitle: "Choose CSV file"
+            )
+        case .steam, .pastedList:
+            return ExportGuide(detail: "", steps: [], links: [], pickTitle: "Choose file")
         }
     }
 }

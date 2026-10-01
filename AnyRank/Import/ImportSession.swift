@@ -5,6 +5,7 @@ import Foundation
 enum ImportSourceKind: String, Codable, CaseIterable, Identifiable {
     case steam
     case letterboxd
+    case imdb
     case goodreads
     case storyGraph
     case pastedList
@@ -15,6 +16,7 @@ enum ImportSourceKind: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .steam:      return "Steam"
         case .letterboxd: return "Letterboxd"
+        case .imdb:       return "IMDb"
         case .goodreads:  return "Goodreads"
         case .storyGraph: return "StoryGraph"
         case .pastedList: return "Pasted list"
@@ -26,6 +28,7 @@ enum ImportSourceKind: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .steam:      return "Your whole game library"
         case .letterboxd: return "Films you've logged"
+        case .imdb:       return "Your ratings or any list"
         case .goodreads:  return "Your Read shelf"
         case .storyGraph: return "Books you've read"
         case .pastedList: return "One item per line, any category"
@@ -36,6 +39,7 @@ enum ImportSourceKind: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .steam:      return "gamecontroller"
         case .letterboxd: return "film"
+        case .imdb:       return "star.square"
         case .goodreads:  return "books.vertical"
         case .storyGraph: return "book"
         case .pastedList: return "list.bullet.clipboard"
@@ -47,7 +51,7 @@ enum ImportSourceKind: String, Codable, CaseIterable, Identifiable {
     var category: Category? {
         switch self {
         case .steam:                  return .games
-        case .letterboxd:             return .movies
+        case .letterboxd, .imdb:      return .movies
         case .goodreads, .storyGraph: return .books
         case .pastedList:             return nil
         }
@@ -57,6 +61,7 @@ enum ImportSourceKind: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .steam:      return "Steam library"
         case .letterboxd: return "Letterboxd films"
+        case .imdb:       return "IMDb ratings"
         case .goodreads:  return "Goodreads books"
         case .storyGraph: return "StoryGraph books"
         case .pastedList: return "Imported list"

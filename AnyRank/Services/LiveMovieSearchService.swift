@@ -68,6 +68,24 @@ struct LiveMovieSearchService: MovieSearchService {
         return enriched
     }
 
+    /// `GET /3/find/{imdb_id}?external_source=imdb_id` — one call, exact
+    /// match. Used by imports that already know the IMDb ID.
+    func lookup(imdbID: String) async throws -> MovieSearchResult? {
+        var components = URLComponents(string: "https://api.themoviedb.org/3/find/\(imdbID)")!
+        components.queryItems = [URLQueryItem(name: "external_source", value: "imdb_id")]
+        guard let url = components.url else { return nil }
+        let data = try await get(url: url)
+        let decoded = try JSONDecoder().decode(TMDBFindResponse.self, from: data)
+        guard let raw = decoded.movie_results.first else { return nil }
+        return MovieSearchResult(
+            id: raw.id,
+            title: raw.title,
+            releaseYear: raw.release_date.flatMap { Self.year(from: $0) },
+            posterURL: raw.poster_path.flatMap { Self.posterURL(fromPath: $0) },
+            imdbURL: URL(string: "https://www.imdb.com/title/\(imdbID)/")
+        )
+    }
+
     // MARK: - TMDB endpoints
 
     private func tmdbSearch(query: String) async throws -> [MovieSearchResult] {
@@ -141,6 +159,11 @@ private struct TMDBSearchResponse: Decodable {
         let release_date: String?
         let poster_path: String?
     }
+}
+
+/// Minimal TMDB `/find/{external_id}` response shape.
+private struct TMDBFindResponse: Decodable {
+    let movie_results: [TMDBSearchResponse.Raw]
 }
 
 /// Minimal TMDB `/movie/{id}/external_ids` response shape.

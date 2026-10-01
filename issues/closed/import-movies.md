@@ -1,10 +1,10 @@
 # Import movie lists from IMDB or Letterboxd
 
-**Status:** open
+**Status:** closed
 **Priority:** medium
 **Effort:** M
 
-**Progress (2026-09-30):** Letterboxd shipped via the import queue (`closed/import-ranking-spree.md`) — ratings suggest a bucket, posters fill in from TMDB as each film comes up. IMDb remains: add an `ImportSourceKind.imdb` case and a parser in `FileImporters`, using the `tt…` ID for a TMDB `/find` lookup.
+**Closed:** 2026-09-30 — both shipped through the import queue (see `closed/import-ranking-spree.md`). Ratings suggest a bucket rather than placing the film; IMDb rows resolve posters via TMDB `/find` by IMDb ID (exact), Letterboxd rows via title + year search. Letterboxd's whole export .zip is accepted.
 
 ## Context
 

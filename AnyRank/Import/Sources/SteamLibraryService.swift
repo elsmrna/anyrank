@@ -86,7 +86,47 @@ enum SteamImport {
     }
 }
 
-enum SteamImportError: LocalizedError {
+/// "Sign in through Steam" — Steam's official OpenID 2.0 login. The user
+/// signs in on steamcommunity.com (in a system web-auth sheet, so Safari's
+/// session and Steam's QR login work); Steam redirects back with their
+/// SteamID in `openid.claimed_id`. No password or token reaches the app.
+///
+/// The returned ID isn't verified with Steam (`check_authentication`), which
+/// is fine here: it only selects whose *public* library to read — the same
+/// thing typing a profile URL does.
+enum SteamSignIn {
+    static let callbackScheme = "anyrank"
+    private static let returnTo = "anyrank://steam-auth"
+
+    static var loginURL: URL {
+        var components = URLComponents(string: "https://steamcommunity.com/openid/login")!
+        let identifierSelect = "http://specs.openid.net/auth/2.0/identifier_select"
+        components.queryItems = [
+            .init(name: "openid.ns", value: "http://specs.openid.net/auth/2.0"),
+            .init(name: "openid.mode", value: "checkid_setup"),
+            .init(name: "openid.return_to", value: returnTo),
+            .init(name: "openid.realm", value: returnTo),
+            .init(name: "openid.identity", value: identifierSelect),
+            .init(name: "openid.claimed_id", value: identifierSelect),
+        ]
+        return components.url!
+    }
+
+    /// The SteamID64 from Steam's redirect, or nil if sign-in didn't complete.
+    static func steamID(fromCallback url: URL) -> String? {
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        guard items.first(where: { $0.name == "openid.mode" })?.value == "id_res",
+              let claimed = items.first(where: { $0.name == "openid.claimed_id" })?.value,
+              let id = claimed.split(separator: "/").last.map(String.init),
+              id.count == 17, id.allSatisfy(\.isNumber) else { return nil }
+        return id
+    }
+
+    /// Where users make their game list readable.
+    static let privacySettingsURL = URL(string: "https://steamcommunity.com/my/edit/settings")!
+}
+
+enum SteamImportError: LocalizedError, Equatable {
     case badProfile
     case profileNotFound
     case privateLibrary
@@ -99,7 +139,7 @@ enum SteamImportError: LocalizedError {
         case .profileNotFound:
             return "Couldn't find that Steam profile."
         case .privateLibrary:
-            return "Steam didn't return any games. In Steam, set Privacy Settings → Game details to Public, then try again."
+            return "Steam didn't share any games. Steam only lets apps see libraries whose Game details are set to Public."
         case .http(let code):
             return "Steam returned an error (\(code)). Try again in a moment."
         }

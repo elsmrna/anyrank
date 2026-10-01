@@ -12,4 +12,10 @@ struct MovieSearchResult: Identifiable, Equatable, Hashable, Sendable, Codable {
 
 protocol MovieSearchService: Sendable {
     func search(query: String) async throws -> [MovieSearchResult]
+    /// Exact lookup by IMDb ID (`tt…`). Nil when not found or unsupported.
+    func lookup(imdbID: String) async throws -> MovieSearchResult?
+}
+
+extension MovieSearchService {
+    func lookup(imdbID: String) async throws -> MovieSearchResult? { nil }
 }

@@ -55,6 +55,9 @@ struct StagedItem: Identifiable, Equatable, Codable {
     /// record (e.g. a Letterboxd row before TMDB enrichment).
     var fallbackYear: Int?
     var fallbackCreator: String?
+    /// IMDb title ID (`tt…`) when the source knows it — lets enrichment do
+    /// an exact TMDB lookup and gives the item its IMDb link.
+    var imdbID: String?
 
     init(id: UUID = UUID(), name: String, category: Category) {
         self.id = id
@@ -127,6 +130,9 @@ struct StagedItem: Identifiable, Equatable, Codable {
         }
         if let sourceURL {
             item.sourceURLString = sourceURL.absoluteString
+        }
+        if item.imdbURLString == nil, let imdbID {
+            item.imdbURLString = "https://www.imdb.com/title/\(imdbID)/"
         }
         if let dateConsumed {
             item.dateConsumed = dateConsumed

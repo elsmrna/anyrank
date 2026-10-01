@@ -8,64 +8,196 @@ enum FileImporters {
 
     enum ParseError: LocalizedError {
         case unrecognized(expected: String)
+        case wrongCategory(source: ImportSourceKind, listCategory: Category)
         case empty
 
         var errorDescription: String? {
             switch self {
             case .unrecognized(let expected):
                 return "This file doesn't look like \(expected). Check you picked the right export."
+            case .wrongCategory(let source, let listCategory):
+                return "That's a \(source.displayName) export, which imports \(source.category?.displayName.lowercased() ?? "items") — this list is for \(listCategory.displayName.lowercased())."
             case .empty:
                 return "Nothing to import in this file."
             }
         }
     }
 
+    /// One CSV document, from a picked file or from inside a picked .zip.
+    struct ImportFile {
+        let name: String
+        let text: String
+
+        /// Read a picked file. A .zip is opened and its CSVs returned, so
+        /// users never have to unzip an export themselves.
+        static func load(from url: URL) throws -> [ImportFile] {
+            let data = try Data(contentsOf: url)
+            if ZipReader.isZip(data) {
+                let files = try ZipReader.entries(in: data)
+                    .filter { $0.path.lowercased().hasSuffix(".csv") && !$0.path.hasPrefix("__MACOSX") }
+                    .map { ImportFile(name: $0.path, text: String(decoding: $0.data, as: UTF8.self)) }
+                guard !files.isEmpty else { throw ParseError.empty }
+                return files
+            }
+            return [ImportFile(name: url.lastPathComponent, text: String(decoding: data, as: UTF8.self))]
+        }
+    }
+
     static func candidates(from text: String, source: ImportSourceKind, category: Category) throws -> [ImportCandidate] {
+        try candidates(from: [ImportFile(name: "", text: text)], source: source, category: category)
+    }
+
+    static func candidates(from files: [ImportFile], source: ImportSourceKind, category: Category) throws -> [ImportCandidate] {
         switch source {
-        case .letterboxd: return try letterboxd(text)
-        case .goodreads:  return try goodreads(text)
-        case .storyGraph: return try storyGraph(text)
-        case .pastedList: return pastedList(text, category: category)
+        case .letterboxd: return try letterboxd(files)
+        case .imdb:       return try imdb(files)
+        case .goodreads:  return try goodreads(files.map(\.text).joined(separator: "\n"))
+        case .storyGraph: return try storyGraph(files.map(\.text).joined(separator: "\n"))
+        case .pastedList: return pastedList(files.map(\.text).joined(separator: "\n"), category: category)
         case .steam:      return []
         }
     }
 
+    /// Which service an export came from, judged by its column headers —
+    /// so picking the "wrong" source on the previous screen still works.
+    static func detect(_ files: [ImportFile]) -> ImportSourceKind? {
+        for file in files {
+            guard let header = try? CSV.decode(String(file.text.prefix(4_000))).first else { continue }
+            let columns = Set(header.map { $0.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "\u{FEFF}", with: "") })
+            if columns.contains("Letterboxd URI") { return .letterboxd }
+            if columns.contains("Exclusive Shelf") { return .goodreads }
+            if columns.contains("Read Status") { return .storyGraph }
+            if columns.contains("Const") && (columns.contains("Title Type") || columns.contains("Your Rating")) { return .imdb }
+        }
+        return nil
+    }
+
     // MARK: Letterboxd
 
-    /// Accepts `watched.csv`, `ratings.csv`, or `diary.csv` from Letterboxd's
-    /// data export (Settings → Import & Export → Export your data).
+    /// Letterboxd's data export (letterboxd.com/settings/data → Export your
+    /// data) — the whole .zip, or any one of its CSVs. Files are merged per
+    /// film (title + year): the current rating from ratings.csv, film links
+    /// from watched/ratings, watch dates from diary.csv, reviews from
+    /// reviews.csv. The watchlist is skipped — those films aren't watched.
     static func letterboxd(_ text: String) throws -> [ImportCandidate] {
-        let table = try Table(text, requiring: ["Name", "Letterboxd URI"], expected: "a Letterboxd export")
+        try letterboxd([ImportFile(name: "", text: text)])
+    }
 
-        // Diary exports repeat films on rewatch; keep one row per film with
-        // the best rating and latest watch.
-        var byURI: [String: (row: Table.Row, rating: Double?, date: Date?)] = [:]
+    static func letterboxd(_ files: [ImportFile]) throws -> [ImportCandidate] {
+        struct Film {
+            var name: String
+            var year: Int?
+            var filmURI: String?
+            var entryURI: String?
+            var currentRating: Double?
+            var diaryRating: Double?
+            var watched: Date?
+            var review: String?
+        }
+        enum Kind { case watched, ratings, diary, reviews }
+
+        let skipped = ["watchlist", "likes", "lists/", "deleted", "orphaned", "profile", "comments"]
+        var films: [String: Film] = [:]
         var order: [String] = []
-        for row in table.rows {
-            guard let uri = row["Letterboxd URI"], row["Name"] != nil else { continue }
-            let rating = row["Rating"].flatMap(Double.init)
-            let date = parseDate(row["Watched Date"] ?? row["Date"])
-            if let existing = byURI[uri] {
-                byURI[uri] = (row, Swift.max(existing.rating ?? 0, rating ?? 0).nonZero, latest(existing.date, date))
-            } else {
-                byURI[uri] = (row, rating, date)
-                order.append(uri)
+        var sawLetterboxdFile = false
+
+        for file in files {
+            let lower = file.name.lowercased()
+            if skipped.contains(where: lower.contains) { continue }
+            guard let table = try? Table(file.text, requiring: ["Name", "Letterboxd URI"], expected: "a Letterboxd export") else { continue }
+            sawLetterboxdFile = true
+
+            let kind: Kind
+            if lower.hasSuffix("reviews.csv") || table.has("Review") { kind = .reviews }
+            else if lower.hasSuffix("diary.csv") || table.has("Watched Date") { kind = .diary }
+            else if lower.hasSuffix("ratings.csv") || table.has("Rating") { kind = .ratings }
+            else { kind = .watched }
+
+            for row in table.rows {
+                guard let name = row["Name"] else { continue }
+                let year = row["Year"].flatMap { Int($0) }
+                let key = ImportMatcher.normalize(name) + "|" + (year.map(String.init) ?? "")
+                var film = films[key] ?? Film(name: name, year: year)
+                if films[key] == nil { order.append(key) }
+
+                let uri = row["Letterboxd URI"]
+                let rating = row["Rating"].flatMap(Double.init)
+                let date = parseDate(row["Watched Date"] ?? row["Date"])
+                switch kind {
+                case .watched:
+                    film.filmURI = film.filmURI ?? uri
+                case .ratings:
+                    film.filmURI = film.filmURI ?? uri
+                    film.currentRating = rating ?? film.currentRating
+                case .diary, .reviews:
+                    // Diary/review links point at the entry, not the film.
+                    film.entryURI = film.entryURI ?? uri
+                    if let rating { film.diaryRating = Swift.max(film.diaryRating ?? 0, rating) }
+                    if kind == .reviews, let review = row["Review"] { film.review = review }
+                }
+                film.watched = latest(film.watched, date)
+                films[key] = film
             }
         }
+        guard sawLetterboxdFile else { throw ParseError.unrecognized(expected: "a Letterboxd export") }
 
-        let candidates: [ImportCandidate] = order.compactMap { uri in
-            guard let entry = byURI[uri], let name = entry.row["Name"] else { return nil }
-            var staged = StagedItem(name: name, category: .movies)
-            staged.fallbackYear = entry.row["Year"].flatMap { Int($0) }
-            staged.sourceURL = URL(string: uri)
-            staged.dateConsumed = entry.date
-            staged.notes = entry.row["Review"]
-            if let rating = entry.rating {
+        let candidates: [ImportCandidate] = order.compactMap { key in
+            guard let film = films[key] else { return nil }
+            var staged = StagedItem(name: film.name, category: .movies)
+            staged.fallbackYear = film.year
+            staged.sourceURL = (film.filmURI ?? film.entryURI).flatMap(URL.init(string:))
+            staged.dateConsumed = film.watched
+            staged.notes = film.review
+            if let rating = film.currentRating ?? film.diaryRating, rating > 0 {
                 staged.suggestedBucket = bucket(forFiveStar: rating)
                 staged.sourceNote = "Rated \(stars(rating)) on Letterboxd"
             }
             return ImportCandidate(item: staged)
         }
+        return try nonEmpty(sortedByRatingThenDate(candidates))
+    }
+
+    // MARK: IMDb
+
+    /// IMDb's ratings export, or any exported list or watchlist (same
+    /// columns). Only film-like titles are kept — series, episodes, games
+    /// and podcasts are skipped. Each row carries its IMDb ID, so posters
+    /// come from an exact TMDB lookup rather than a title search.
+    static func imdb(_ text: String) throws -> [ImportCandidate] {
+        try imdb([ImportFile(name: "", text: text)])
+    }
+
+    static func imdb(_ files: [ImportFile]) throws -> [ImportCandidate] {
+        let filmTypes: Set<String> = [
+            "movie", "tv movie", "tvmovie", "short", "tv short", "tvshort",
+            "video", "tv special", "tvspecial",
+        ]
+        var seen = Set<String>()
+        var candidates: [ImportCandidate] = []
+        var sawIMDbFile = false
+
+        for file in files {
+            guard let table = try? Table(file.text, requiring: ["Const", "Title"], expected: "an IMDb export") else { continue }
+            sawIMDbFile = true
+            for row in table.rows {
+                guard let title = row["Title"],
+                      let id = row["Const"].flatMap(ImportMatcher.Identity.imdbID(in:)),
+                      seen.insert(id).inserted else { continue }
+                if let type = row["Title Type"]?.lowercased(), !filmTypes.contains(type) { continue }
+
+                var staged = StagedItem(name: title, category: .movies)
+                staged.imdbID = id
+                staged.fallbackYear = row["Year"].flatMap { Int($0) }
+                staged.sourceURL = URL(string: "https://www.imdb.com/title/\(id)/")
+                staged.dateConsumed = parseDate(row["Date Rated"])
+                if let rating = row["Your Rating"].flatMap(Int.init), rating > 0 {
+                    staged.suggestedBucket = bucket(forTenPoint: rating)
+                    staged.sourceNote = "Rated \(rating)/10 on IMDb"
+                }
+                candidates.append(ImportCandidate(item: staged))
+            }
+        }
+        guard sawIMDbFile else { throw ParseError.unrecognized(expected: "an IMDb export") }
         return try nonEmpty(sortedByRatingThenDate(candidates))
     }
 
@@ -151,6 +283,16 @@ enum FileImporters {
 
     // MARK: Helpers
 
+    /// Ten-point scale (IMDb) → bucket.
+    static func bucket(forTenPoint rating: Int) -> Bucket {
+        switch rating {
+        case 9...:  return .loved
+        case 7...8: return .liked
+        case 5...6: return .fine
+        default:    return .didntLike
+        }
+    }
+
     /// Five-star scale → bucket. Half-stars round toward the nearer bucket.
     static func bucket(forFiveStar rating: Double) -> Bucket {
         switch rating {
@@ -229,6 +371,9 @@ enum FileImporters {
         }
 
         let rows: [Row]
+        private let columns: Set<String>
+
+        func has(_ column: String) -> Bool { columns.contains(column) }
 
         init(_ text: String, requiring required: [String], expected: String) throws {
             // Strip a UTF-8 BOM, which some exports include.
@@ -236,12 +381,13 @@ enum FileImporters {
             let parsed = try CSV.decode(cleaned)
             guard let header = parsed.first else { throw ParseError.empty }
             var columns: [String: Int] = [:]
-            for (i, name) in header.enumerated() {
+            for (i, name) in header.enumerated() where columns[name.trimmingCharacters(in: .whitespaces)] == nil {
                 columns[name.trimmingCharacters(in: .whitespaces)] = i
             }
             guard required.allSatisfy({ columns[$0] != nil }) else {
                 throw ParseError.unrecognized(expected: expected)
             }
+            self.columns = Set(columns.keys)
             rows = parsed.dropFirst().map { Row(values: $0, columns: columns) }
         }
     }
