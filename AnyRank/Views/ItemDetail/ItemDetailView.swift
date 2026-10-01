@@ -156,10 +156,16 @@ struct ItemDetailView: View {
 
             if let url = item.primaryURL {
                 Link(destination: url) {
-                    Label("Open in \(linkLabel)", systemImage: "arrow.up.right")
+                    HStack(spacing: 8) {
+                        if let brand = ServiceBrand(url: url) {
+                            BrandIcon(brand: brand, size: 20)
+                        } else {
+                            Image(systemName: "arrow.up.right")
+                        }
+                        Text("Open in \(linkLabel(for: url))")
+                    }
                 }
                 .buttonStyle(HeroActionStyle())
-                .labelStyle(TightLabelStyle())
                 .padding(.top, 4)
             }
         }
@@ -173,7 +179,10 @@ struct ItemDetailView: View {
         return "#\(index + 1) of \(sorted.count)"
     }
 
-    private var linkLabel: String {
+    /// Named for where the link actually goes — an imported Steam game links
+    /// to Steam even though its category's usual destination is IGDB.
+    private func linkLabel(for url: URL) -> String {
+        if let brand = ServiceBrand(url: url) { return brand.displayName }
         switch list.category {
         case .restaurants, .bars: return "Maps"
         case .movies:             return "IMDb"

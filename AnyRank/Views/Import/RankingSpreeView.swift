@@ -52,6 +52,7 @@ struct RankingSpreeView: View {
                         secondaryText: staged.secondaryText,
                         suggestedBucket: staged.suggestedBucket,
                         sourceNote: staged.sourceNote,
+                        sourceBrand: ServiceBrand(session.source),
                         onSkip: session.pending.count > 1 ? { skip(staged) } : nil,
                         onRemove: { remove(staged) }
                     ) { bucket in

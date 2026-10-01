@@ -18,6 +18,8 @@ struct BucketPickerScreen: View {
     /// Tag text on the suggested bucket ("Current" when re-ranking).
     var suggestionLabel: String = "Suggested"
     var sourceNote: String? = nil
+    /// Brand shown beside `sourceNote` (the service the item came from).
+    var sourceBrand: ServiceBrand? = nil
     /// "Skip for now" — shown only when provided.
     var onSkip: (() -> Void)? = nil
     /// "Not this one" — shown only when provided.
@@ -91,10 +93,15 @@ struct BucketPickerScreen: View {
                                 .lineLimit(1)
                         }
                         if let sourceNote {
-                            Text(sourceNote)
-                                .font(.footnote.weight(.medium))
-                                .foregroundStyle(Theme.accent)
-                                .padding(.top, 2)
+                            HStack(spacing: 6) {
+                                if let sourceBrand {
+                                    BrandIcon(brand: sourceBrand, size: 16)
+                                }
+                                Text(sourceNote)
+                                    .font(.footnote.weight(.medium))
+                                    .foregroundStyle(Theme.accent)
+                            }
+                            .padding(.top, 2)
                         }
                     }
                     Spacer(minLength: 0)

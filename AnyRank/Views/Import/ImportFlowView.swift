@@ -139,14 +139,7 @@ private struct ImportSourcePicker: View {
                             onPick(source)
                         } label: {
                             HStack(spacing: 14) {
-                                Image(systemName: source.systemImage)
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundStyle(source.category?.tint ?? Theme.taupe)
-                                    .frame(width: 44, height: 44)
-                                    .background(
-                                        (source.category?.tint ?? Theme.taupe).opacity(0.14),
-                                        in: RoundedRectangle(cornerRadius: 13, style: .continuous)
-                                    )
+                                SourceIcon(source: source, size: 44)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(source.displayName)
                                         .font(.headline)
@@ -226,7 +219,10 @@ private struct SteamInputScreen: View {
                 if isLoading {
                     ProgressView().tint(Theme.onAccent)
                 } else {
-                    Text("Sign in with Steam")
+                    HStack(spacing: 10) {
+                        BrandIcon(brand: .steam, size: 24)
+                        Text("Sign in with Steam")
+                    }
                 }
             }
             .buttonStyle(.primary)
@@ -390,9 +386,15 @@ private struct FileInputScreen: View {
                     }
                     ForEach(guide.links, id: \.url) { link in
                         Link(destination: link.url) {
-                            Label(link.title, systemImage: "safari")
+                            HStack(spacing: 8) {
+                                if let brand = ServiceBrand(url: link.url) {
+                                    BrandIcon(brand: brand, size: 20)
+                                } else {
+                                    Image(systemName: "safari")
+                                }
+                                Text(link.title)
+                            }
                                 .font(.subheadline.weight(.semibold))
-                                .labelStyle(TightLabelStyle())
                                 .foregroundStyle(Theme.textPrimary)
                                 .padding(.horizontal, 14)
                                 .frame(height: 38)
@@ -813,15 +815,36 @@ private struct InputHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(source.displayName)
-                .font(.display(.title))
-                .foregroundStyle(Theme.textPrimary)
+            HStack(spacing: 12) {
+                SourceIcon(source: source, size: 40)
+                Text(source.displayName)
+                    .font(.display(.title))
+                    .foregroundStyle(Theme.textPrimary)
+            }
             Text(detail)
                 .font(.callout)
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 8)
+    }
+}
+
+/// A source's brand icon, or a neutral glyph tile for a pasted list.
+struct SourceIcon: View {
+    let source: ImportSourceKind
+    var size: CGFloat = 40
+
+    var body: some View {
+        if let brand = ServiceBrand(source) {
+            BrandIcon(brand: brand, size: size)
+        } else {
+            Image(systemName: source.systemImage)
+                .font(.system(size: size * 0.42, weight: .medium))
+                .foregroundStyle(Theme.taupe)
+                .frame(width: size, height: size)
+                .background(Theme.taupe.opacity(0.14), in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
+        }
     }
 }
 

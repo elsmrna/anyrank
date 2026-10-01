@@ -10,11 +10,7 @@ struct ImportProgressCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
-                Image(systemName: session.source.systemImage)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Theme.accent)
-                    .frame(width: 40, height: 40)
-                    .background(Theme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                SourceIcon(source: session.source, size: 40)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(session.source.displayName) import")
                         .font(.headline)

@@ -233,7 +233,11 @@ struct ListsHomeView: View {
                             .padding(.leading, 4)
                         ForEach(categoryLists) { list in
                             NavigationLink(value: list.id) {
-                                ListCard(list: list, pendingImportCount: importStore.session(for: list.id)?.pending.count)
+                                ListCard(
+                                    list: list,
+                                    pendingImportCount: importStore.session(for: list.id)?.pending.count,
+                                    importSource: importStore.session(for: list.id)?.source
+                                )
                             }
                             .buttonStyle(.pressable)
                             .contextMenu {
@@ -277,6 +281,7 @@ private struct ListCard: View {
     let list: RankList
     /// Items still waiting in this list's import, if one is underway.
     var pendingImportCount: Int? = nil
+    var importSource: ImportSourceKind? = nil
 
     private var topItems: [RankItem] {
         Array(list.itemsSortedByScore().prefix(3))
@@ -309,9 +314,15 @@ private struct ListCard: View {
                 BucketDistributionBar(counts: list.bucketCounts)
             }
             if let pendingImportCount {
-                Label("\(pendingImportCount) to rank", systemImage: "square.and.arrow.down")
+                HStack(spacing: 6) {
+                    if let brand = importSource.flatMap(ServiceBrand.init) {
+                        BrandIcon(brand: brand, size: 16)
+                    } else {
+                        Image(systemName: "square.and.arrow.down")
+                    }
+                    Text("\(pendingImportCount) to rank")
+                }
                     .font(.footnote.weight(.semibold))
-                    .labelStyle(TightLabelStyle())
                     .foregroundStyle(Theme.accent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
