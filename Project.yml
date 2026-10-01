@@ -65,6 +65,7 @@ targets:
         TwitchClientSecret: $(TWITCH_CLIENT_SECRET)
         SpotifyClientID: $(SPOTIFY_CLIENT_ID)
         SpotifyClientSecret: $(SPOTIFY_CLIENT_SECRET)
+        SteamWebAPIKey: $(STEAM_WEB_API_KEY)
         CFBundleURLTypes:
           - CFBundleTypeRole: Editor
             CFBundleURLSchemes:

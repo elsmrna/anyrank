@@ -17,6 +17,8 @@ struct AddItemResultScreen: View {
     let stagedName: String
     let placement: RankingSession.Placement
     let onDone: () -> Void
+    /// How long the screen holds before continuing on its own.
+    var holdDuration: Duration = Self.dismissDelay
 
     /// How long the screen stays visible after the checkmark animates
     /// in. Long enough to register as a "done" moment, short enough
@@ -84,7 +86,7 @@ struct AddItemResultScreen: View {
             }
         }
         .task {
-            try? await Task.sleep(for: Self.dismissDelay)
+            try? await Task.sleep(for: holdDuration)
             guard !Task.isCancelled else { return }
             onDone()
         }

@@ -1,10 +1,14 @@
 import SwiftUI
 
 /// Top-level view. Wraps the home screen in a NavigationStack so list
-/// detail and item detail can push naturally.
+/// detail and item detail can push naturally. The stack's path lives on
+/// `AppRouter` so flows like import can navigate programmatically.
 struct RootView: View {
+    @Environment(\.router) private var router
+
     var body: some View {
-        NavigationStack {
+        @Bindable var router = router
+        NavigationStack(path: $router.path) {
             ListsHomeView()
         }
     }

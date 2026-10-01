@@ -140,7 +140,8 @@ struct CreateListView: View {
     }
 }
 
-private struct CategoryChip: View {
+/// Selectable category tile, used by create-list and import.
+struct CategoryChip: View {
     let category: Category
     let isSelected: Bool
     let action: () -> Void

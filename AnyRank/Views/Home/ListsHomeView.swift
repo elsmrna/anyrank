@@ -4,6 +4,8 @@ import SwiftUI
 struct ListsHomeView: View {
     @Environment(Repository.self) private var repository
     @Environment(AuthSession.self) private var auth
+    @Environment(\.importStore) private var importStore
+    @State private var importing = false
     @State private var creatingList: CreateListRequest?
     @State private var showingSettings = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
@@ -42,10 +44,21 @@ struct ListsHomeView: View {
             }
             if !lists.isEmpty {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        creatingList = CreateListRequest()
+                    Menu {
+                        Button {
+                            creatingList = CreateListRequest()
+                        } label: {
+                            Label("New list", systemImage: "plus")
+                        }
+                        Button {
+                            importing = true
+                        } label: {
+                            Label("Import a collection", systemImage: "square.and.arrow.down")
+                        }
                     } label: {
-                        Label("New list", systemImage: "plus")
+                        Label("Add", systemImage: "plus")
+                    } primaryAction: {
+                        creatingList = CreateListRequest()
                     }
                 }
             }
@@ -59,6 +72,9 @@ struct ListsHomeView: View {
             NavigationStack {
                 CreateListView(initialCategory: request.category)
             }
+        }
+        .sheet(isPresented: $importing) {
+            ImportFlowView()
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView()
@@ -123,6 +139,7 @@ struct ListsHomeView: View {
     private func commitDelete() {
         guard let list = deletingList else { return }
         deletingList = nil
+        importStore.abandon(list.id)
         withAnimation(Theme.spring) {
             repository.deleteList(list)
         }
@@ -181,10 +198,16 @@ struct ListsHomeView: View {
                     }
                 }
 
-                Button("Create a list") {
-                    creatingList = CreateListRequest()
+                VStack(spacing: 10) {
+                    Button("Create a list") {
+                        creatingList = CreateListRequest()
+                    }
+                    .buttonStyle(.primary)
+                    Button("Import from Steam, Letterboxd…") {
+                        importing = true
+                    }
+                    .buttonStyle(.secondary)
                 }
-                .buttonStyle(.primary)
             }
             .padding(.horizontal, Theme.gutter)
             .padding(.bottom, 32)
@@ -210,7 +233,7 @@ struct ListsHomeView: View {
                             .padding(.leading, 4)
                         ForEach(categoryLists) { list in
                             NavigationLink(value: list.id) {
-                                ListCard(list: list)
+                                ListCard(list: list, pendingImportCount: importStore.session(for: list.id)?.pending.count)
                             }
                             .buttonStyle(.pressable)
                             .contextMenu {
@@ -252,6 +275,8 @@ struct CreateListRequest: Identifiable {
 
 private struct ListCard: View {
     let list: RankList
+    /// Items still waiting in this list's import, if one is underway.
+    var pendingImportCount: Int? = nil
 
     private var topItems: [RankItem] {
         Array(list.itemsSortedByScore().prefix(3))
@@ -282,6 +307,15 @@ private struct ListCard: View {
             }
             if !list.items.isEmpty {
                 BucketDistributionBar(counts: list.bucketCounts)
+            }
+            if let pendingImportCount {
+                Label("\(pendingImportCount) to rank", systemImage: "square.and.arrow.down")
+                    .font(.footnote.weight(.semibold))
+                    .labelStyle(TightLabelStyle())
+                    .foregroundStyle(Theme.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Theme.accent.opacity(0.12), in: Capsule())
             }
         }
         .padding(16)

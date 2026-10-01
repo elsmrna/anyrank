@@ -28,7 +28,14 @@ struct RerankFlow: View {
             newItemSecondaryText: { _ in RankingApplier.comparisonSecondaryText(for: item, in: list) },
             onCommit: { _, placement in apply(placement: placement) }
         ) {
-            BucketPickerScreen(itemName: item.name) { bucket in
+            BucketPickerScreen(
+                itemName: item.name,
+                artworkURLString: RankingApplier.comparisonImageURLString(for: item, in: list),
+                category: list.category,
+                secondaryText: RankingApplier.comparisonSecondaryText(for: item, in: list),
+                suggestedBucket: item.bucket,
+                suggestionLabel: "Current"
+            ) { bucket in
                 coordinator.bucketPicked(bucket)
             }
         }

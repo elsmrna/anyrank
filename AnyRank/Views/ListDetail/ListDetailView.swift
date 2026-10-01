@@ -6,6 +6,8 @@ struct ListDetailView: View {
     let list: RankList
 
     @Environment(Repository.self) private var repository
+    @Environment(\.importStore) private var importStore
+    @Environment(\.router) private var router
     @Environment(\.dismiss) private var dismiss
 
     @State private var addingItem = false
@@ -20,13 +22,21 @@ struct ListDetailView: View {
     @State private var renameDraft = ""
     @State private var confirmingDelete = false
 
+    @State private var importing = false
+    @State private var ranking = false
+    @State private var confirmingAbandon = false
+
+    private var importSession: ImportSession? {
+        importStore.session(for: list.id)
+    }
+
     private var sortedItems: [RankItem] {
         list.itemsSortedByScore()
     }
 
     var body: some View {
         Group {
-            if list.items.isEmpty {
+            if list.items.isEmpty && importSession == nil {
                 emptyState
             } else {
                 itemList
@@ -38,6 +48,11 @@ struct ListDetailView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
+                    Button {
+                        importing = true
+                    } label: {
+                        Label("Import into this list…", systemImage: "square.and.arrow.down")
+                    }
                     Button {
                         renameDraft = list.name
                         renaming = true
@@ -58,8 +73,8 @@ struct ListDetailView: View {
         // thumb-reachable, and doesn't cover the last row the way a
         // floating button would.
         .safeAreaInset(edge: .bottom) {
-            if !list.items.isEmpty {
-                addButton
+            if !list.items.isEmpty || importSession != nil {
+                bottomActions
                     .padding(.horizontal, Theme.gutter)
                     .padding(.top, 12)
                     .padding(.bottom, 8)
@@ -80,6 +95,26 @@ struct ListDetailView: View {
         .sheet(item: $pendingRerank) { pending in
             RerankFlow(item: pending.item, list: list)
         }
+        .sheet(isPresented: $ranking) {
+            RankingSpreeView(list: list)
+        }
+        .sheet(isPresented: $importing) {
+            ImportFlowView(targetList: list)
+        }
+        .confirmationDialog("Abandon this import?", isPresented: $confirmingAbandon, titleVisibility: .visible) {
+            Button("Abandon import", role: .destructive) {
+                withAnimation(Theme.spring) { importStore.abandon(list.id) }
+            }
+            Button("Keep going", role: .cancel) {}
+        } message: {
+            if let importSession {
+                Text("The \(importSession.pending.count) you haven't ranked yet won't be added. The \(importSession.rankedCount) you've ranked stay in the list.")
+            }
+        }
+        // An import was just created for this list — start ranking once
+        // any sheet that created it has finished dismissing.
+        .onAppear(perform: startRequestedSpree)
+        .onChange(of: router.spreeRequestListID) { _, _ in startRequestedSpree() }
         .alert("Rename list", isPresented: $renaming) {
             TextField("List name", text: $renameDraft)
                 .textInputAutocapitalization(.words)
@@ -93,6 +128,47 @@ struct ListDetailView: View {
             Text("This removes the list, all its items, and its comparison history.")
         }
         .sensoryFeedback(.success, trigger: highlightedItemID) { _, new in new != nil }
+    }
+
+    /// Bottom bar: with an import underway, continuing it is the primary
+    /// action and adding one item by hand is secondary.
+    @ViewBuilder
+    private var bottomActions: some View {
+        if let importSession {
+            HStack(spacing: 10) {
+                Button {
+                    ranking = true
+                } label: {
+                    Text("Continue ranking · \(importSession.pending.count) left")
+                        .contentTransition(.numericText())
+                }
+                .buttonStyle(.primary)
+                Button {
+                    addingItem = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                        .frame(width: 52, height: 52)
+                        .background(Theme.surface, in: Circle())
+                        .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 0.5))
+                }
+                .buttonStyle(.pressable)
+                .accessibilityLabel("Add \(list.category.itemNoun)")
+            }
+        } else {
+            addButton
+        }
+    }
+
+    private func startRequestedSpree() {
+        guard router.spreeRequestListID == list.id else { return }
+        router.spreeRequestListID = nil
+        guard importSession != nil else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            ranking = true
+        }
     }
 
     private var addButton: some View {
@@ -135,11 +211,25 @@ struct ListDetailView: View {
 
         return ScrollViewReader { proxy in
             List {
-                Section {
-                    summaryHeader
+                if !items.isEmpty {
+                    Section {
+                        summaryHeader
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 4, trailing: 4))
                 }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 4, trailing: 4))
+
+                if let importSession {
+                    Section {
+                        ImportProgressCard(
+                            session: importSession,
+                            category: list.category,
+                            onAbandon: { confirmingAbandon = true }
+                        )
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
 
                 if shouldShowRerankBanner {
                     Section {
@@ -205,7 +295,9 @@ struct ListDetailView: View {
             .listSectionSpacing(14)
             .themedList()
             .onChange(of: list.items.count) { old, new in
-                guard new > old, let newest = list.items.max(by: { $0.createdAt < $1.createdAt }) else { return }
+                // During a spree the sheet covers the list; don't scroll or
+                // buzz behind it for every placement.
+                guard !ranking, new > old, let newest = list.items.max(by: { $0.createdAt < $1.createdAt }) else { return }
                 revealNewItem(newest.id, proxy: proxy)
             }
         }
@@ -248,7 +340,8 @@ struct ListDetailView: View {
     }
 
     private var shouldShowRerankBanner: Bool {
-        !rerankPromptDismissed
+        importSession == nil
+            && !rerankPromptDismissed
             && list.items.count >= 3
             && list.additionsSinceLastRerankPrompt >= list.rerankPromptThreshold
     }
@@ -271,6 +364,7 @@ struct ListDetailView: View {
     }
 
     private func commitDelete() {
+        importStore.abandon(list.id)
         dismiss()
         // Delete once the pop has finished so this screen doesn't blank
         // out mid-transition; the home card then animates away.

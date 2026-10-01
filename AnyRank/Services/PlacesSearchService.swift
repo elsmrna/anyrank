@@ -2,7 +2,7 @@ import Foundation
 
 /// Result returned by a place lookup. Used to populate `RankItem`'s
 /// Restaurants/Bars metadata fields.
-struct PlaceSearchResult: Identifiable, Equatable, Hashable, Sendable {
+struct PlaceSearchResult: Identifiable, Equatable, Hashable, Sendable, Codable {
     let id: String           // Google Places place_id
     let name: String
     let address: String

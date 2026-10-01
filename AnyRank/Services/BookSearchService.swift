@@ -9,7 +9,7 @@ import Foundation
 /// `https://app.thestorygraph.com/browse?search_term=<query>` for search
 /// fallbacks. Mock data uses the former; the live integration may need
 /// the latter when an exact slug isn't recoverable from the upstream source.
-struct BookSearchResult: Identifiable, Equatable, Hashable, Sendable {
+struct BookSearchResult: Identifiable, Equatable, Hashable, Sendable, Codable {
     /// Stable identifier from whatever upstream source produced this result.
     /// For mocks this is a synthetic UUID-like string; for the live path
     /// it would be an OpenLibrary work key, ISBN, or similar.

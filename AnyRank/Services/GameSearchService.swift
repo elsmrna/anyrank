@@ -3,7 +3,7 @@ import Foundation
 /// Result returned by a game metadata lookup. IGDB is the primary
 /// source; `id` is IGDB's numeric ID. Cover URL uses IGDB's image CDN
 /// at `t_cover_big` size (277×370, plenty for a comparison thumbnail).
-struct GameSearchResult: Identifiable, Equatable, Hashable, Sendable {
+struct GameSearchResult: Identifiable, Equatable, Hashable, Sendable, Codable {
     let id: Int
     let name: String
     /// Platform abbreviations, in the order IGDB returned them

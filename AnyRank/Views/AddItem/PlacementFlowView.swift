@@ -12,6 +12,12 @@ struct PlacementFlowView<Root: View>: View {
     let newItemSecondaryText: (StagedItem) -> String?
     /// Persist the final placement. Called exactly once.
     let onCommit: (StagedItem, RankingSession.Placement) -> Void
+    /// Label for the leading button on the root screen.
+    var cancelTitle: String = "Cancel"
+    /// Runs after a commit instead of dismissing — lets a caller chain into
+    /// the next item (import sprees).
+    var afterCommit: (() -> Void)? = nil
+    var resultHold: Duration = .milliseconds(1400)
     @ViewBuilder let root: () -> Root
 
     @Environment(\.dismiss) private var dismiss
@@ -26,7 +32,7 @@ struct PlacementFlowView<Root: View>: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") { dismiss() }
+                            Button(cancelTitle) { dismiss() }
                         }
                     }
                     .navigationDestination(for: AddItemCoordinator.Step.self) { step in
@@ -37,9 +43,12 @@ struct PlacementFlowView<Root: View>: View {
             }
 
             if case .finished(let staged, let placement) = coordinator.phase {
-                AddItemResultScreen(stagedName: staged.name, placement: placement) {
-                    commit(staged: staged, placement: placement)
-                }
+                AddItemResultScreen(
+                    stagedName: staged.name,
+                    placement: placement,
+                    onDone: { commit(staged: staged, placement: placement) },
+                    holdDuration: resultHold
+                )
                 .screenBackground()
                 .transition(.opacity)
                 .zIndex(1)
@@ -62,7 +71,12 @@ struct PlacementFlowView<Root: View>: View {
     private func destination(for step: AddItemCoordinator.Step) -> some View {
         switch step {
         case .bucketPick:
-            BucketPickerScreen(itemName: coordinator.staged?.name ?? "") { bucket in
+            BucketPickerScreen(
+                itemName: coordinator.staged?.name ?? "",
+                artworkURLString: coordinator.staged.flatMap(newItemImageURLString),
+                category: coordinator.list.category,
+                secondaryText: coordinator.staged.flatMap(newItemSecondaryText)
+            ) { bucket in
                 coordinator.bucketPicked(bucket)
             }
         case .comparing:
@@ -84,6 +98,10 @@ struct PlacementFlowView<Root: View>: View {
         guard !committed else { return }
         committed = true
         onCommit(staged, placement)
-        dismiss()
+        if let afterCommit {
+            afterCommit()
+        } else {
+            dismiss()
+        }
     }
 }

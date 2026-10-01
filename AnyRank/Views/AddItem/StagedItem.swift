@@ -8,7 +8,7 @@ import Foundation
 /// category was the source. The ID is generated once at construction time
 /// so the comparison flow's `RankingSession` can reference the new item by
 /// a stable UUID before SwiftData ever sees it.
-struct StagedItem: Identifiable, Equatable {
+struct StagedItem: Identifiable, Equatable, Codable {
     let id: UUID
     var name: String
     var category: Category
@@ -35,6 +35,26 @@ struct StagedItem: Identifiable, Equatable {
     // Custom
     var customLink: String?
     var customFieldValues: [String: String]
+
+    // MARK: Import provenance
+    //
+    // Populated by importers (Steam, Letterboxd, …). All optional so items
+    // staged through search are unaffected.
+
+    /// Link to the item on the source service; becomes `sourceURLString`.
+    var sourceURL: URL?
+    /// Bucket the source's own rating points to. Shown as a hint on the
+    /// bucket picker — never applied automatically.
+    var suggestedBucket: Bucket?
+    /// One line of context from the source, e.g. "212 hours played" or
+    /// "Rated ★★★★ on Letterboxd".
+    var sourceNote: String?
+    var dateConsumed: Date?
+    var notes: String?
+    /// Year / creator known from the source when there's no full catalog
+    /// record (e.g. a Letterboxd row before TMDB enrichment).
+    var fallbackYear: Int?
+    var fallbackCreator: String?
 
     init(id: UUID = UUID(), name: String, category: Category) {
         self.id = id
@@ -105,5 +125,79 @@ struct StagedItem: Identifiable, Equatable {
         if !customFieldValues.isEmpty {
             item.customFieldValues = customFieldValues
         }
+        if let sourceURL {
+            item.sourceURLString = sourceURL.absoluteString
+        }
+        if let dateConsumed {
+            item.dateConsumed = dateConsumed
+        }
+        if let notes, !notes.isEmpty {
+            item.notes = notes
+        }
+        if item.releaseYear == nil {
+            item.releaseYear = fallbackYear
+        }
+        if let fallbackCreator, !fallbackCreator.isEmpty {
+            switch category {
+            case .books:
+                if item.author == nil { item.author = fallbackCreator }
+            case .albums, .songs:
+                if item.artist == nil { item.artist = fallbackCreator }
+            default:
+                break
+            }
+        }
     }
+
+    // MARK: Display
+
+    /// Thumbnail for the not-yet-persisted item, mirroring
+    /// `RankingApplier.comparisonImageURLString(for:in:)` for saved items.
+    var artworkURLString: String? {
+        switch category {
+        case .movies: return movie?.posterURL?.absoluteString
+        case .books:  return book?.coverURL?.absoluteString
+        case .anime:  return anime?.coverURL?.absoluteString
+        case .games:  return game?.coverURL?.absoluteString
+        case .albums: return album?.coverURL?.absoluteString
+        case .songs:  return song?.coverURL?.absoluteString
+        case .restaurants, .bars, .custom: return nil
+        }
+    }
+
+    /// One-line supporting text — parallel to
+    /// `RankingApplier.comparisonSecondaryText(for:in:)`.
+    var secondaryText: String? {
+        func joined(_ parts: [String?]) -> String? {
+            let kept = parts.compactMap { $0 }.filter { !$0.isEmpty }
+            return kept.isEmpty ? nil : kept.joined(separator: " · ")
+        }
+        let year = fallbackYear.map(String.init)
+        switch category {
+        case .movies:
+            return (movie?.releaseYear).map(String.init) ?? year
+        case .books:
+            guard let book else { return joined([fallbackCreator, year]) }
+            return joined([book.author, book.publicationYear.map(String.init)])
+        case .anime:
+            guard let anime else { return year }
+            return joined([
+                anime.seasonYear.map(String.init),
+                (anime.episodeCount ?? 0) > 1 ? "\(anime.episodeCount!) eps" : nil,
+            ])
+        case .games:
+            guard let game else { return year }
+            let platforms = GameSearchScreen.compactPlatforms(game.platforms)
+            return joined([platforms, game.firstReleaseYear.map(String.init) ?? year])
+        case .albums:
+            guard let album else { return joined([fallbackCreator, year]) }
+            return joined([album.artist, album.releaseYear.map(String.init)])
+        case .songs:
+            guard let song else { return fallbackCreator }
+            return joined([song.artist, song.albumTitle])
+        case .restaurants, .bars, .custom:
+            return place?.address
+        }
+    }
+
 }

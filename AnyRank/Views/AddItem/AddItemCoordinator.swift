@@ -52,8 +52,9 @@ final class AddItemCoordinator {
     let list: RankList
     let snapshotProvider: () -> RankingSession.ListSnapshot
 
-    /// Re-rank flows start at bucket pick; there's nothing to identify.
-    let isRerank: Bool
+    /// Re-rank and import flows start at bucket pick — the item is already
+    /// identified, so the bucket picker is the root screen.
+    let startsAtBucketPick: Bool
 
     init(
         list: RankList,
@@ -61,7 +62,17 @@ final class AddItemCoordinator {
     ) {
         self.list = list
         self.snapshotProvider = snapshotProvider ?? { RankingApplier.snapshot(of: list) }
-        self.isRerank = false
+        self.startsAtBucketPick = false
+    }
+
+    /// Place an item that's already identified — e.g. the next entry in an
+    /// import queue. Starts at bucket pick, compares against the whole list.
+    init(placing staged: StagedItem, in list: RankList) {
+        self.list = list
+        self.snapshotProvider = { RankingApplier.snapshot(of: list) }
+        self.startsAtBucketPick = true
+        self.phase = .bucketPick(staged: staged)
+        self.staged = staged
     }
 
     /// Re-rank an existing item: the comparison snapshot excludes the item
@@ -70,7 +81,7 @@ final class AddItemCoordinator {
     init(rerank item: RankItem, in list: RankList) {
         self.list = list
         self.snapshotProvider = { RankingApplier.snapshot(of: list, excludingItemID: item.id) }
-        self.isRerank = true
+        self.startsAtBucketPick = true
         let staged = StagedItem(id: item.id, name: item.name, category: list.category)
         self.phase = .bucketPick(staged: staged)
         self.staged = staged
@@ -78,6 +89,14 @@ final class AddItemCoordinator {
 
     func itemIdentified(_ staged: StagedItem) {
         phase = .bucketPick(staged: staged)
+    }
+
+    /// Swap in richer metadata for the item (artwork, links) that arrived
+    /// after the flow started. Only allowed before comparisons begin, so a
+    /// session never sees the item change under it.
+    func updateStaged(_ updated: StagedItem) {
+        guard case .bucketPick(let current) = phase, current.id == updated.id else { return }
+        phase = .bucketPick(staged: updated)
     }
 
     func bucketPicked(_ bucket: Bucket) {
@@ -106,7 +125,7 @@ final class AddItemCoordinator {
         case .identifying, .finished:
             return false
         case .bucketPick:
-            guard !isRerank else { return false }
+            guard !startsAtBucketPick else { return false }
             phase = .identifying
             return true
         case .comparing(let staged, _):
@@ -119,7 +138,7 @@ final class AddItemCoordinator {
     var canGoBack: Bool {
         switch phase {
         case .identifying, .finished: return false
-        case .bucketPick:             return !isRerank
+        case .bucketPick:             return !startsAtBucketPick
         case .comparing:              return true
         }
     }
@@ -146,8 +165,8 @@ final class AddItemCoordinator {
                 // comparisons only happened if the comparison screen showed.
                 pushed = placement.comparisons.isEmpty ? [.bucketPick] : [.bucketPick, .comparing]
             }
-            // Re-rank's root screen *is* the bucket picker.
-            return isRerank ? Array(pushed.dropFirst()) : pushed
+            // For re-rank and import, the root screen *is* the bucket picker.
+            return startsAtBucketPick ? Array(pushed.dropFirst()) : pushed
         }
         set {
             while newValue.count < path.count, back() {}

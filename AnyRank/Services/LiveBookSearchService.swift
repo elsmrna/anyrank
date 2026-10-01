@@ -81,7 +81,7 @@ struct LiveBookSearchService: BookSearchService {
     ///
     /// If the resulting slug is empty (title was all punctuation, e.g.),
     /// fall back to StoryGraph's browse URL keyed on the raw title.
-    private static func storyGraphURL(forTitle title: String) -> URL? {
+    static func storyGraphURL(forTitle title: String) -> URL? {
         let slug = title
             .lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.union(.whitespaces).inverted)

@@ -80,6 +80,12 @@ final class RankItem: Identifiable {
     var customLinkString: String?
     var customFieldValues: [String: String]
 
+    // MARK: Import provenance
+    /// Link to the item on the service it was imported from (a Steam store
+    /// page, a Letterboxd film, a Goodreads book). Used as the item's link
+    /// when the category's canonical link is missing.
+    var sourceURLString: String?
+
     var bucket: Bucket {
         get { Bucket(rawValue: bucketRaw) ?? .fine }
         set { bucketRaw = newValue.rawValue }
@@ -100,7 +106,7 @@ final class RankItem: Identifiable {
             // link, falling back to the user-provided free-form link.
             urlString = mapsURLString ?? customLinkString
         }
-        return urlString.flatMap { URL(string: $0) }
+        return (urlString ?? sourceURLString).flatMap { URL(string: $0) }
     }
 
     /// True iff the bucket containing this item has at least 3 members.

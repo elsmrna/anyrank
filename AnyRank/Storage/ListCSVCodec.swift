@@ -37,7 +37,8 @@ enum ListCSVCodec {
         "anime_format", "episode_count", "anilist_url",
         "platforms", "igdb_url",
         "artist", "album_title", "duration_seconds", "spotify_url",
-        "custom_link"
+        "custom_link",
+        "source_url"
     ]
 
     @MainActor
@@ -81,7 +82,8 @@ enum ListCSVCodec {
             item.albumTitle ?? "",
             item.durationSeconds.map { String($0) } ?? "",
             item.spotifyURLString ?? "",
-            item.customLinkString ?? ""
+            item.customLinkString ?? "",
+            item.sourceURLString ?? ""
         ]
         for name in customFieldNames {
             values.append(item.customFieldValues[name] ?? "")
@@ -165,6 +167,7 @@ enum ListCSVCodec {
         item.spotifyURLString = field(row, columnIndex, "spotify_url")
 
         item.customLinkString = field(row, columnIndex, "custom_link")
+        item.sourceURLString = field(row, columnIndex, "source_url")
 
         for name in list.customFieldNames {
             if let value = field(row, columnIndex, "custom_\(name)"), !value.isEmpty {

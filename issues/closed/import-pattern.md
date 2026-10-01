@@ -1,8 +1,10 @@
 # Generic import pattern for external lists
 
-**Status:** deferred
+**Status:** closed
 **Priority:** low
 **Effort:** M
+
+**Closed:** 2026-09-30 — superseded by `closed/import-ranking-spree.md`. The shared machinery exists (`AnyRank/Import/`), but imports queue items for the compare flow rather than mapping ratings straight to buckets; source ratings become a *suggested* bucket only.
 
 ## Context
 

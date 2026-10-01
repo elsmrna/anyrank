@@ -3,7 +3,7 @@ import Foundation
 /// Result for a single album lookup. `id` is a Spotify album id (base62
 /// string) when live, or a synthetic string for mocks. `coverURL` uses
 /// Spotify's images at a moderate size (~300px).
-struct AlbumSearchResult: Identifiable, Equatable, Hashable, Sendable {
+struct AlbumSearchResult: Identifiable, Equatable, Hashable, Sendable, Codable {
     let id: String
     let title: String
     let artist: String
@@ -14,7 +14,7 @@ struct AlbumSearchResult: Identifiable, Equatable, Hashable, Sendable {
 
 /// Result for a single song lookup. Songs carry their parent album
 /// title too — helpful for disambiguating covers and re-releases.
-struct SongSearchResult: Identifiable, Equatable, Hashable, Sendable {
+struct SongSearchResult: Identifiable, Equatable, Hashable, Sendable, Codable {
     let id: String
     let title: String
     let artist: String

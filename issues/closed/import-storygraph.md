@@ -1,8 +1,10 @@
 # Import book lists from StoryGraph
 
-**Status:** open
+**Status:** closed
 **Priority:** medium
 **Effort:** M
+
+**Closed:** 2026-09-30 — shipped as part of `closed/import-ranking-spree.md`, with one deliberate change: star ratings suggest a bucket rather than placing the book, and every book is ranked through comparisons (in a resumable queue). Goodreads shipped alongside it.
 
 ## Context
 

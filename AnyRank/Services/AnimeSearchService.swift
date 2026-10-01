@@ -7,7 +7,7 @@ import Foundation
 /// `format` uses AniList's raw strings ("TV", "MOVIE", "OVA", "SPECIAL",
 /// "ONA", "MUSIC") to avoid an enum migration when AniList adds new
 /// formats. Display code lower-cases + prettifies for the UI.
-struct AnimeSearchResult: Identifiable, Equatable, Hashable, Sendable {
+struct AnimeSearchResult: Identifiable, Equatable, Hashable, Sendable, Codable {
     /// AniList `media.id`.
     let id: Int
     let title: String

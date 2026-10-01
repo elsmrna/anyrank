@@ -72,6 +72,12 @@ The IGDB and Spotify services share `AppOAuthTokenStore` — a small actor that 
 
 The remaining stubs: Google Places photos on comparison cards (would need an extra Places SDK call per result — deferred; see `issues/live-places-photos.md`) and the educational onboarding walkthrough.
 
+## Imports and ranking sprees
+
+A one-time import pulls a whole collection (Steam library, Letterboxd / Goodreads / StoryGraph CSV export, or a pasted list) into a list as a **queue**, then the user ranks it through the normal comparison flow at their own pace. Code lives in `AnyRank/Import/` (sources, `ImportMatcher`, `ImportStore`, `ImportEnricher`) and `AnyRank/Views/Import/` (`ImportFlowView`, `RankingSpreeView`, `ImportProgressCard`).
+
+The queue (`ImportSession`) is persisted to `<Application Support>/AnyRank/imports.json`, local-only and not synced — only ranked items become part of the list (and therefore the Sheet). At most one session per list; importing more into a list with one running appends to its queue. Source ratings are carried as a *suggested* bucket on the bucket picker, never applied automatically. Queued items without artwork are enriched just in time from the category's search service, accepting exact normalized-title matches only. Steam needs `STEAM_WEB_API_KEY` in `Secrets.xcconfig`; without it the import runs against a sample library (and says so). See `issues/closed/import-ranking-spree.md`.
+
 ## Visual design
 
 The UI is themed from a single set of tokens in `AnyRank/Design/Theme.swift` (colors, bucket colors/glyphs, category tints, serif display type, motion) and shared components in `AnyRank/Design/Components.swift` (cards, primary/secondary/pressable button styles, artwork thumbnails, score badges, bucket distribution bar, search field). The palette is earthy: terracotta accent, stone, taupe, espresso ink, olive; dark mode is a deep espresso with lifted versions of the same hues. Every bucket carries a glyph as well as a color so buckets stay distinguishable without color vision. Views should reach for `Theme.*` rather than system colors.

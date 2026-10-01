@@ -7,6 +7,8 @@ struct AnyRankApp: App {
     @State private var repository: Repository
     @State private var authSession: AuthSession
     @State private var syncCoordinator: SyncCoordinator
+    @State private var importStore = ImportStore(fileURL: ImportStore.defaultLocation())
+    @State private var router = AppRouter()
 
     /// Concrete Places service chosen at launch based on whether a Google
     /// Places API key is configured. Live when the key is present, Mock
@@ -28,6 +30,10 @@ struct AnyRankApp: App {
     /// configured, mock otherwise. One service backs both Albums and
     /// Songs categories.
     private let musicService: any MusicSearchService
+
+    /// Steam library reader for imports — live Web API when a key is
+    /// configured, a sample library otherwise.
+    private let steamService: any SteamLibraryService
 
     /// Scene phase at the App level. Drives the background-flush behavior:
     /// when the user backgrounds the app we force any pending Sheets push
@@ -99,6 +105,12 @@ struct AnyRankApp: App {
             self.musicService = MockMusicSearchService()
         }
 
+        if let live = LiveSteamLibraryService() {
+            self.steamService = live
+        } else {
+            self.steamService = SampleSteamLibraryService()
+        }
+
         _repository = State(initialValue: repo)
         _authSession = State(initialValue: auth)
         _syncCoordinator = State(initialValue: sync)
@@ -122,8 +134,16 @@ struct AnyRankApp: App {
                 .environment(\.animeService, LiveAniListSearchService())
                 .environment(\.gameService, gameService)
                 .environment(\.musicService, musicService)
+                .environment(\.steamLibraryService, steamService)
+                .environment(\.importStore, importStore)
+                .environment(\.router, router)
                 .task {
                     await repository.loadAll()
+                    // Forget imports whose list no longer exists. Skipped when
+                    // nothing loaded, so a failed read can't wipe the queues.
+                    if !repository.lists.isEmpty {
+                        importStore.prune(keeping: Set(repository.lists.map(\.id)))
+                    }
                     #if DEBUG
                     if DemoSeed.isRequested { DemoSeed.seedIfEmpty(repository) }
                     #endif

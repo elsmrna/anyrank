@@ -39,6 +39,8 @@
 	<string>$(SPOTIFY_CLIENT_ID)</string>
 	<key>SpotifyClientSecret</key>
 	<string>$(SPOTIFY_CLIENT_SECRET)</string>
+	<key>SteamWebAPIKey</key>
+	<string>$(STEAM_WEB_API_KEY)</string>
 	<key>TMDBReadToken</key>
 	<string>$(TMDB_READ_TOKEN)</string>
 	<key>TwitchClientID</key>

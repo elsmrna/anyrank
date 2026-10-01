@@ -58,6 +58,11 @@ enum Secrets {
     static var spotifyClientID: String? { readNonEmpty("SpotifyClientID") }
     static var spotifyClientSecret: String? { readNonEmpty("SpotifyClientSecret") }
 
+    /// Steam Web API key (https://steamcommunity.com/dev/apikey). Used to
+    /// read a user's owned games for the Steam import. Missing → the import
+    /// runs against a sample library.
+    static var steamWebAPIKey: String? { readNonEmpty("SteamWebAPIKey") }
+
     private static func readNonEmpty(_ key: String) -> String? {
         guard let raw = Bundle.main.object(forInfoDictionaryKey: key) as? String else {
             return nil
