@@ -140,13 +140,20 @@ struct ListDetailView: View {
         }
     }
 
+    /// Primary normally; quiet while an import is underway, so the import
+    /// card's "Continue ranking" is the one obvious next step.
+    @ViewBuilder
     private var addButton: some View {
-        Button {
+        let button = Button {
             addingItem = true
         } label: {
             Label("Add \(list.category.itemNoun)", systemImage: "plus")
         }
-        .buttonStyle(.primary)
+        if importSession != nil {
+            button.buttonStyle(.secondary)
+        } else {
+            button.buttonStyle(.primary)
+        }
     }
 
     // MARK: Empty state
