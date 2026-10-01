@@ -74,7 +74,7 @@ struct ListDetailView: View {
         // floating button would.
         .safeAreaInset(edge: .bottom) {
             if !list.items.isEmpty || importSession != nil {
-                bottomActions
+                addButton
                     .padding(.horizontal, Theme.gutter)
                     .padding(.top, 12)
                     .padding(.bottom, 8)
@@ -128,37 +128,6 @@ struct ListDetailView: View {
             Text("This removes the list, all its items, and its comparison history.")
         }
         .sensoryFeedback(.success, trigger: highlightedItemID) { _, new in new != nil }
-    }
-
-    /// Bottom bar: with an import underway, continuing it is the primary
-    /// action and adding one item by hand is secondary.
-    @ViewBuilder
-    private var bottomActions: some View {
-        if let importSession {
-            HStack(spacing: 10) {
-                Button {
-                    ranking = true
-                } label: {
-                    Text("Continue ranking · \(importSession.pending.count) left")
-                        .contentTransition(.numericText())
-                }
-                .buttonStyle(.primary)
-                Button {
-                    addingItem = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.headline)
-                        .foregroundStyle(Theme.textPrimary)
-                        .frame(width: 52, height: 52)
-                        .background(Theme.surface, in: Circle())
-                        .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 0.5))
-                }
-                .buttonStyle(.pressable)
-                .accessibilityLabel("Add \(list.category.itemNoun)")
-            }
-        } else {
-            addButton
-        }
     }
 
     private func startRequestedSpree() {
@@ -224,6 +193,7 @@ struct ListDetailView: View {
                         ImportProgressCard(
                             session: importSession,
                             category: list.category,
+                            onContinue: { ranking = true },
                             onAbandon: { confirmingAbandon = true }
                         )
                     }
