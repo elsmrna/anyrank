@@ -3,7 +3,7 @@
 **Status:** closed
 **Priority:** high
 **Effort:** L
-**Closed:** 2026-09-30 — `AnyRank/Import/`, `AnyRank/Views/Import/` (no commit; repo not under git yet)
+**Closed:** 2026-09-30 — commit 9cf527c (`AnyRank/Import/`, `AnyRank/Views/Import/`)
 
 ## Context
 
