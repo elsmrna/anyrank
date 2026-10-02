@@ -29,6 +29,14 @@ final class SyncCoordinator: SyncObserver {
 
     private(set) var status: Status = .disabled
 
+    /// How many lists were brought back from an existing Sheet the last time
+    /// sync was turned on. Settings uses it to confirm the restore.
+    private(set) var restoredListCount: Int?
+
+    /// Title of the backing spreadsheet. Also how `connectSpreadsheet` finds
+    /// an existing backup when no spreadsheet ID is saved on this device.
+    static let spreadsheetTitle = "AnyRank Data"
+
     private weak var repository: Repository?
     private let auth: AuthSession
     private let sheetsClient: GoogleSheetsClient
@@ -77,7 +85,7 @@ final class SyncCoordinator: SyncObserver {
     // MARK: Enable / disable from Settings
 
     /// User flipped the sync toggle on. Requests Drive/Sheets scopes if
-    /// needed, then creates the spreadsheet in Drive on first enable.
+    /// needed, then connects to the backing spreadsheet.
     func enableSync() async {
         status = .syncing
         do {
@@ -85,27 +93,84 @@ final class SyncCoordinator: SyncObserver {
             guard let accessToken = await auth.currentAccessToken() else {
                 throw AuthError.notConfigured
             }
-            if spreadsheetID == nil {
-                let id = try await sheetsClient.createSpreadsheet(
-                    title: "AnyRank Data",
-                    accessToken: accessToken
-                )
-                spreadsheetID = id
-            }
-            status = .ready(spreadsheetID: spreadsheetID!, lastSyncedAt: nil)
-            // First push: write everything we have locally.
-            if let repository {
-                for list in repository.lists {
-                    schedulePush(for: list.id)
-                }
-            }
+            try await connectSpreadsheet(accessToken: accessToken)
         } catch {
             status = .error(error.localizedDescription)
         }
     }
 
+    /// Finds or creates the backing spreadsheet and gets local and remote in
+    /// step.
+    ///
+    /// The spreadsheet ID is saved in `UserDefaults`, which doesn't survive
+    /// deleting the app. So when no ID is saved, look in Drive for an
+    /// existing "AnyRank Data" spreadsheet before creating a new one, and
+    /// bring back any lists it has that this device doesn't: everything on
+    /// a fresh install, or the lists missing after a few were made before
+    /// sync was turned on. When both sides have a list, the local copy wins,
+    /// matching the rest of the sync model.
+    func connectSpreadsheet(accessToken: String) async throws {
+        restoredListCount = nil
+        var adoptedExisting = false
+        if spreadsheetID == nil {
+            if let existing = try await findExistingSpreadsheet(accessToken: accessToken) {
+                spreadsheetID = existing
+                adoptedExisting = true
+            } else {
+                spreadsheetID = try await sheetsClient.createSpreadsheet(
+                    title: Self.spreadsheetTitle,
+                    accessToken: accessToken
+                )
+            }
+        }
+        guard let id = spreadsheetID, let repository else { return }
+        status = .ready(spreadsheetID: id, lastSyncedAt: nil)
+
+        let localLists = repository.lists
+        if adoptedExisting {
+            let localIDs = Set(localLists.map(\.id))
+            let missing = try await fetchRemoteLists(spreadsheetID: id, accessToken: accessToken)
+                .filter { !localIDs.contains($0.id) }
+            if !missing.isEmpty {
+                repository.replaceLists(localLists + missing)
+                restoredListCount = missing.count
+                status = .ready(spreadsheetID: id, lastSyncedAt: Date())
+            }
+        }
+
+        // Write what this device had. Restored lists are already in the
+        // Sheet; the index push after these covers the full merged set.
+        for list in localLists {
+            schedulePush(for: list.id)
+        }
+    }
+
+    /// The app's existing backup in Drive, if any. When there are several
+    /// (earlier versions created a fresh spreadsheet after every reinstall),
+    /// prefer the most recently modified one that actually lists something
+    /// in its `_index` tab.
+    private func findExistingSpreadsheet(accessToken: String) async throws -> String? {
+        let candidates = try await sheetsClient.findSpreadsheets(
+            titled: Self.spreadsheetTitle,
+            accessToken: accessToken
+        )
+        guard candidates.count > 1 else { return candidates.first?.id }
+        for candidate in candidates {
+            let index = (try? await sheetsClient.readTab(
+                spreadsheetID: candidate.id,
+                tabName: SheetsIndexCodec.tabName,
+                accessToken: accessToken
+            )) ?? ""
+            if let entries = try? SheetsIndexCodec.decode(index), !entries.isEmpty {
+                return candidate.id
+            }
+        }
+        return candidates.first?.id
+    }
+
     func disableSync() {
         status = .disabled
+        restoredListCount = nil
         spreadsheetID = nil
         pendingPushIDs.removeAll()
         pushTask?.cancel()
@@ -263,12 +328,6 @@ final class SyncCoordinator: SyncObserver {
     ///     stays empty. The user can start creating lists locally and
     ///     they'll push to the Sheet alongside the orphaned remote data;
     ///     the cleanup is theirs to do in the spreadsheet directly.
-    ///
-    /// Pull reads the `_index` tab first to recover list metadata
-    /// (category, custom field names, re-rank threshold). If `_index` is
-    /// missing — for example, the spreadsheet was hand-created or
-    /// pre-dates the index format — every remaining tab is imported as a
-    /// Custom list as a best effort.
     func pullChanges() async {
         guard case .ready(let id, _) = status else { return }
         guard let accessToken = await auth.currentAccessToken() else { return }
@@ -280,56 +339,7 @@ final class SyncCoordinator: SyncObserver {
         guard repository.lists.isEmpty else { return }
 
         do {
-            let indexText = (try? await sheetsClient.readTab(
-                spreadsheetID: id,
-                tabName: SheetsIndexCodec.tabName,
-                accessToken: accessToken
-            )) ?? ""
-            let entries = (try? SheetsIndexCodec.decode(indexText)) ?? []
-
-            var pulledLists: [RankList] = []
-            if !entries.isEmpty {
-                // Structured pull: use _index to reconstruct each list.
-                for entry in entries {
-                    let list = entry.makeList()
-                    await populate(list: list, fromSpreadsheet: id, accessToken: accessToken)
-                    pulledLists.append(list)
-                }
-            } else {
-                // Fallback: no `_index` — best-effort import each non-system
-                // tab as a Custom list. Tab-name shape decides the list's
-                // identity: a UUID-named tab (our current format) reuses
-                // that UUID so subsequent pushes hit the same tab; any
-                // other tab name is treated as a legacy display-name tab
-                // and gets a fresh UUID plus its name preserved.
-                let tabs = try await sheetsClient.listTabs(spreadsheetID: id, accessToken: accessToken)
-                for tab in tabs where !tab.hasSuffix("_comparisons") && tab != SheetsIndexCodec.tabName {
-                    let list: RankList
-                    if let parsedID = UUID(uuidString: tab) {
-                        list = RankList(id: parsedID, name: tab, category: .custom)
-                    } else {
-                        list = RankList(name: tab, category: .custom)
-                    }
-                    // Read by literal tab name here rather than via
-                    // `populate` — populate keys off the list's UUID,
-                    // which for legacy display-name tabs doesn't match.
-                    let itemsCSV = (try? await sheetsClient.readTab(
-                        spreadsheetID: id,
-                        tabName: tab,
-                        accessToken: accessToken
-                    )) ?? ""
-                    try? ListCSVCodec.decodeItems(into: list, from: itemsCSV)
-                    if let comparisonsCSV = try? await sheetsClient.readTab(
-                        spreadsheetID: id,
-                        tabName: "\(tab)_comparisons",
-                        accessToken: accessToken
-                    ) {
-                        try? ListCSVCodec.decodeComparisons(into: list, from: comparisonsCSV)
-                    }
-                    pulledLists.append(list)
-                }
-            }
-
+            let pulledLists = try await fetchRemoteLists(spreadsheetID: id, accessToken: accessToken)
             // Wholesale swap. `replaceLists` does not re-fire the sync
             // observer, so this doesn't trigger an immediate push back.
             repository.replaceLists(pulledLists)
@@ -337,6 +347,71 @@ final class SyncCoordinator: SyncObserver {
         } catch {
             status = .error("Pull failed: \(error.localizedDescription)")
         }
+    }
+
+    /// Read every list out of the spreadsheet without touching the local
+    /// store.
+    ///
+    /// Reads the `_index` tab first to recover list metadata (category,
+    /// custom field names, re-rank threshold). If `_index` is missing — for
+    /// example, the spreadsheet was hand-created or pre-dates the index
+    /// format — every remaining tab is imported as a Custom list as a best
+    /// effort.
+    private func fetchRemoteLists(spreadsheetID id: String, accessToken: String) async throws -> [RankList] {
+        let indexText = (try? await sheetsClient.readTab(
+            spreadsheetID: id,
+            tabName: SheetsIndexCodec.tabName,
+            accessToken: accessToken
+        )) ?? ""
+        let entries = (try? SheetsIndexCodec.decode(indexText)) ?? []
+
+        var pulledLists: [RankList] = []
+        if !entries.isEmpty {
+            // Structured pull: use _index to reconstruct each list.
+            for entry in entries {
+                let list = entry.makeList()
+                await populate(list: list, fromSpreadsheet: id, accessToken: accessToken)
+                pulledLists.append(list)
+            }
+        } else {
+            // Fallback: no `_index` — best-effort import each non-system
+            // tab as a Custom list. Tab-name shape decides the list's
+            // identity: a UUID-named tab (our current format) reuses
+            // that UUID so subsequent pushes hit the same tab; any
+            // other tab name is treated as a legacy display-name tab
+            // and gets a fresh UUID plus its name preserved.
+            let tabs = try await sheetsClient.listTabs(spreadsheetID: id, accessToken: accessToken)
+            for tab in tabs where !tab.hasSuffix("_comparisons") && tab != SheetsIndexCodec.tabName {
+                let list: RankList
+                if let parsedID = UUID(uuidString: tab) {
+                    list = RankList(id: parsedID, name: tab, category: .custom)
+                } else {
+                    list = RankList(name: tab, category: .custom)
+                }
+                // Read by literal tab name here rather than via
+                // `populate` — populate keys off the list's UUID,
+                // which for legacy display-name tabs doesn't match.
+                let itemsCSV = (try? await sheetsClient.readTab(
+                    spreadsheetID: id,
+                    tabName: tab,
+                    accessToken: accessToken
+                )) ?? ""
+                // A blank tab isn't a list — it's the "Sheet1" every new
+                // spreadsheet starts with. (Lists the app pushes always
+                // have at least a header row.)
+                guard !itemsCSV.isEmpty else { continue }
+                try? ListCSVCodec.decodeItems(into: list, from: itemsCSV)
+                if let comparisonsCSV = try? await sheetsClient.readTab(
+                    spreadsheetID: id,
+                    tabName: "\(tab)_comparisons",
+                    accessToken: accessToken
+                ) {
+                    try? ListCSVCodec.decodeComparisons(into: list, from: comparisonsCSV)
+                }
+                pulledLists.append(list)
+            }
+        }
+        return pulledLists
     }
 
     /// Pull a single list's items and comparisons tabs into `list`. Used by

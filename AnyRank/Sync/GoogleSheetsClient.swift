@@ -3,8 +3,8 @@ import Foundation
 /// Thin HTTP client over the Google Sheets v4 and Drive v3 APIs. All calls
 /// authenticate via a bearer access token (obtained from `AuthSession`).
 ///
-/// Scope: enough to support the sync model — create a spreadsheet, list
-/// tabs, read a tab as CSV, replace a tab's contents from a CSV, and
+/// Scope: enough to support the sync model — create or find a spreadsheet,
+/// list tabs, read a tab as CSV, replace a tab's contents from a CSV, and
 /// delete a tab. Not a general-purpose Sheets SDK.
 struct GoogleSheetsClient: Sendable {
 
@@ -37,6 +37,44 @@ struct GoogleSheetsClient: Sendable {
             throw SheetsError.unexpectedResponse("createSpreadsheet did not return spreadsheetId")
         }
         return id
+    }
+
+    /// A spreadsheet found in the user's Drive.
+    struct DriveFile: Equatable, Sendable {
+        let id: String
+        let modifiedTime: Date?
+    }
+
+    /// Spreadsheets in the user's Drive with exactly this title, most
+    /// recently modified first. With the `drive.file` scope Drive only
+    /// returns files this app created, which is what lets the app find its
+    /// own backup after a reinstall wipes the saved spreadsheet ID.
+    func findSpreadsheets(titled title: String, accessToken: String) async throws -> [DriveFile] {
+        let escapedTitle = title
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "\\'")
+        var components = URLComponents(string: "https://www.googleapis.com/drive/v3/files")!
+        components.queryItems = [
+            URLQueryItem(
+                name: "q",
+                value: "name = '\(escapedTitle)' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false"
+            ),
+            URLQueryItem(name: "orderBy", value: "modifiedTime desc"),
+            URLQueryItem(name: "fields", value: "files(id,modifiedTime)"),
+            URLQueryItem(name: "spaces", value: "drive"),
+        ]
+        var request = URLRequest(url: components.url!)
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+
+        let (data, _) = try await sendValidating(request)
+        let decoded = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        let files = decoded?["files"] as? [[String: Any]] ?? []
+        let dateFormat = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+        return files.compactMap { file in
+            guard let id = file["id"] as? String else { return nil }
+            let modified = (file["modifiedTime"] as? String).flatMap { try? dateFormat.parse($0) }
+            return DriveFile(id: id, modifiedTime: modified)
+        }
     }
 
     /// Returns the names of every tab (worksheet) in the spreadsheet.

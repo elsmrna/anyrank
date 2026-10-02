@@ -149,10 +149,19 @@ struct SettingsView: View {
                 case .disabled:
                     EmptyView()
                 }
+
+                if let restored = sync.restoredListCount {
+                    Label(
+                        "Found your backup and restored \(restored) \(restored == 1 ? "list" : "lists").",
+                        systemImage: "checkmark.circle"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                }
             } header: {
                 Text("Sync")
             } footer: {
-                Text("Each list is backed up as a tab in a Google Sheet named \"AnyRank Data\" in your Drive. The app is the source of truth — edits made directly in the Sheet get overwritten.")
+                Text("Each list is backed up as a tab in a Google Sheet named \"AnyRank Data\" in your Drive. If you've synced before, turning this on brings back any lists that aren't on this device. The app is the source of truth — edits made directly in the Sheet get overwritten.")
             }
         }
     }
