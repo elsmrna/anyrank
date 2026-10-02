@@ -56,7 +56,7 @@ Custom lists pick up the same flow via the new `RankList.linksToMapsLocation` fl
 
 ## Books integration (Open Library + StoryGraph URLs)
 
-`LiveBookSearchService` hits Open Library's `/search.json` (keyless, generous rate limits) and maps each hit into a `BookSearchResult`. First-author-first-ISBN heuristic. StoryGraph URLs are constructed slug-optimistically from the title with a browse-URL fallback when the slug would be empty. Cover URLs come from `covers.openlibrary.org`. `BookSearchResult.coverURL` and `RankItem.coverURLString` round-trip through the CSV codec's new `cover_url` column. See [#11](https://github.com/elsmrna/anyrank/issues/11).
+`LiveBookSearchService` hits Open Library's `/search.json` (keyless, generous rate limits) and maps each hit into a `BookSearchResult`. First-author-first-ISBN heuristic. StoryGraph URLs are constructed slug-optimistically from the title with a browse-URL fallback when the slug would be empty. Cover URLs come from `covers.openlibrary.org`. All artwork loads through `ArtworkCache` (used by `ArtworkView`), which keeps downscaled thumbnails in Caches and retries transient failures. It resolves Open Library cover-by-ISBN URLs, which StoryGraph and Goodreads imports produce, to cover-ID URLs via search: the ISBN endpoint allows only 100 requests per 5 minutes and answers "no cover" with a 1×1 GIF, which used to leave blank tiles in big imported libraries. `BookSearchResult.coverURL` and `RankItem.coverURLString` round-trip through the CSV codec's new `cover_url` column. See [#11](https://github.com/elsmrna/anyrank/issues/11).
 
 ## What's stubbed
 

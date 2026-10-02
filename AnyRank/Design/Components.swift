@@ -139,19 +139,31 @@ struct ArtworkView: View {
     var width: CGFloat = 44
     var cornerRadius: CGFloat = 8
 
+    @State private var image: UIImage?
+
+    init(urlString: String?, category: Category, width: CGFloat = 44, cornerRadius: CGFloat = 8) {
+        self.urlString = urlString
+        self.category = category
+        self.width = width
+        self.cornerRadius = cornerRadius
+        // Draw already-loaded artwork on the first frame, so rows scrolling
+        // back into view don't flash the placeholder.
+        _image = State(initialValue: urlString.flatMap(URL.init(string:)).flatMap(ArtworkCache.cachedImage(for:)))
+    }
+
     private var height: CGFloat { width / category.artworkAspectRatio }
+
+    /// Waits between attempts after a transient failure (throttling, a
+    /// dropped connection). The task ends when the view goes away.
+    private static let retryDelays: [Duration] = [.seconds(2), .seconds(6), .seconds(20)]
 
     var body: some View {
         Group {
-            if let urlString, let url = URL(string: urlString) {
-                AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.2))) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable().aspectRatio(contentMode: .fill)
-                            .transition(.opacity)
-                    } else {
-                        placeholder
-                    }
-                }
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .transition(.opacity)
             } else {
                 placeholder
             }
@@ -159,6 +171,34 @@ struct ArtworkView: View {
         .frame(width: width, height: height)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .accessibilityHidden(true)
+        .task(id: urlString) { await load() }
+    }
+
+    private func load() async {
+        guard let urlString, let url = URL(string: urlString) else {
+            image = nil
+            return
+        }
+        if let cached = ArtworkCache.cachedImage(for: url) {
+            image = cached
+            return
+        }
+        image = nil
+        for attempt in 0...Self.retryDelays.count {
+            if attempt > 0 {
+                try? await Task.sleep(for: Self.retryDelays[attempt - 1])
+                if Task.isCancelled { return }
+            }
+            switch await ArtworkCache.shared.load(url) {
+            case .image(let loaded):
+                withAnimation(.easeOut(duration: 0.2)) { image = loaded }
+                return
+            case .missing:
+                return
+            case .failed:
+                continue
+            }
+        }
     }
 
     private var placeholder: some View {

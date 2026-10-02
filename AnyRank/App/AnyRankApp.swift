@@ -44,9 +44,9 @@ struct AnyRankApp: App {
     init() {
         AppAppearance.configure()
 
-        // Cover art and posters load through AsyncImage, which leans on
-        // URLCache. The default memory budget is tiny, so thumbnails would
-        // re-fetch every time a row scrolls back into view.
+        // Cover art goes through ArtworkCache, which keeps its own
+        // thumbnails. The account avatar in Settings still loads through
+        // AsyncImage, which leans on URLCache.
         URLCache.shared = URLCache(
             memoryCapacity: 48 * 1024 * 1024,
             diskCapacity: 256 * 1024 * 1024
