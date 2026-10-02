@@ -1,11 +1,23 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
-/// Settings sheet. Exposes account + sync controls. Sync is opt-in and
-/// available only to signed-in users — local-only mode is the default.
+/// Settings sheet. Exposes account + sync controls, plus export/restore of
+/// every list. Sync is opt-in and available only to signed-in users —
+/// local-only mode is the default.
 struct SettingsView: View {
     @Environment(AuthSession.self) private var auth
     @Environment(SyncCoordinator.self) private var sync
+    @Environment(Repository.self) private var repository
+    @Environment(\.importStore) private var importStore
     @Environment(\.dismiss) private var dismiss
+
+    /// The export zip, built when Settings opens (lists can't change while
+    /// it's up) so the share button is ready to tap.
+    @State private var exportURL: URL?
+    @State private var choosingRestoreFile = false
+    @State private var pendingRestore: [RankList]?
+    @State private var restoreMessage: String?
+    @State private var restoreError: String?
 
     var body: some View {
         NavigationStack {
@@ -13,6 +25,7 @@ struct SettingsView: View {
                 Group {
                     accountSection
                     syncSection
+                    dataSection
                     aboutSection
                 }
                 .listRowBackground(Theme.surface)
@@ -29,6 +42,34 @@ struct SettingsView: View {
             }
         }
         .presentationBackground(Theme.background)
+        .task(id: repository.lists.count) {
+            exportURL = repository.lists.isEmpty ? nil : try? await ListArchive.export(repository.lists)
+        }
+        .fileImporter(isPresented: $choosingRestoreFile, allowedContentTypes: [.zip]) { result in
+            Task { await readRestoreFile(result) }
+        }
+        .confirmationDialog(
+            "Replace your lists?",
+            isPresented: Binding(get: { pendingRestore != nil }, set: { if !$0 { pendingRestore = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingRestore
+        ) { lists in
+            Button("Restore \(lists.count) \(lists.count == 1 ? "list" : "lists")", role: .destructive) {
+                restore(lists)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { lists in
+            Text(restoreWarning(for: lists))
+        }
+        .alert(
+            "Couldn't restore",
+            isPresented: Binding(get: { restoreError != nil }, set: { if !$0 { restoreError = nil } }),
+            presenting: restoreError
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { message in
+            Text(message)
+        }
     }
 
     // MARK: Account
@@ -136,6 +177,64 @@ struct SettingsView: View {
         )
     }
 
+    // MARK: Your data
+
+    private var dataSection: some View {
+        Section {
+            if let exportURL {
+                ShareLink(item: exportURL) {
+                    Label("Export lists", systemImage: "square.and.arrow.up")
+                }
+            } else {
+                Label("Export lists", systemImage: "square.and.arrow.up")
+                    .foregroundStyle(Theme.textTertiary)
+            }
+            Button {
+                choosingRestoreFile = true
+            } label: {
+                Label("Restore from export…", systemImage: "arrow.counterclockwise")
+            }
+            if let restoreMessage {
+                Text(restoreMessage)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        } header: {
+            Text("Your data")
+        } footer: {
+            Text("Exports a .zip with every list as a spreadsheet file. Keep it in Files or send it to yourself, and restore it here on any device.")
+        }
+    }
+
+    private func readRestoreFile(_ result: Result<URL, Error>) async {
+        do {
+            let url = try result.get()
+            let accessing = url.startAccessingSecurityScopedResource()
+            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+            let lists = try await ListArchive.lists(fromArchive: Data(contentsOf: url))
+            if repository.lists.isEmpty {
+                restore(lists)
+            } else {
+                pendingRestore = lists
+            }
+        } catch {
+            restoreError = error.localizedDescription
+        }
+    }
+
+    private func restoreWarning(for lists: [RankList]) -> String {
+        let current = repository.lists.count
+        let items = lists.reduce(0) { $0 + $1.items.count }
+        return "This replaces your \(current) current \(current == 1 ? "list" : "lists") with the \(lists.count) in this export (\(items) \(items == 1 ? "item" : "items")). It can't be undone, so export first if you want to keep what's here."
+    }
+
+    private func restore(_ lists: [RankList]) {
+        repository.replaceLists(lists, notifySync: true)
+        importStore.prune(keeping: Set(lists.map(\.id)))
+        Task { exportURL = try? await ListArchive.export(lists) }
+        restoreMessage = "Restored \(lists.count) \(lists.count == 1 ? "list" : "lists")."
+    }
+
     // MARK: About
 
     private var aboutSection: some View {
@@ -190,18 +289,21 @@ private struct AccountRow: View {
 
 #Preview("Signed out") {
     SettingsView()
+        .environment(PreviewSupport.multipleListsRepository())
         .environment(AuthSession.previewSignedOut())
         .environment(SyncCoordinator.preview())
 }
 
 #Preview("Signed in, sync off") {
     SettingsView()
+        .environment(PreviewSupport.multipleListsRepository())
         .environment(AuthSession.previewSignedIn())
         .environment(SyncCoordinator.preview())
 }
 
 #Preview("Signed in, sync on") {
     SettingsView()
+        .environment(PreviewSupport.multipleListsRepository())
         .environment(AuthSession.previewSignedIn())
         .environment(SyncCoordinator.preview(status: .ready(spreadsheetID: "abc123", lastSyncedAt: Date(timeIntervalSinceNow: -120))))
 }

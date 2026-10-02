@@ -140,7 +140,9 @@ Live Books search runs against Open Library (keyless, generous rate limits) with
 
 Google Sheets sync ships as an opt-in toggle in Settings (off by default — sign-in alone identifies the user but doesn't move data off the device). When enabled, the app requests Drive/Sheets scopes, creates an "AnyRank Data" spreadsheet, and pushes one tab per list. See [#5](https://github.com/elsmrna/anyrank/issues/5) for the design notes.
 
-Also deferred: educational onboarding walkthrough, JSON export. (The visual design system — palette, type, icon — is in place; see `BUILD_NOTES.md` § Visual design.) See [GitHub Issues](https://github.com/elsmrna/anyrank/issues) for the tracked items and `Spec.md` "Open TBDs" for the full list.
+Settings → Your data exports every list as a .zip (the same `index.json` and CSVs the app stores on disk) and restores one, so people who don't sign in still have a backup. See [#17](https://github.com/elsmrna/anyrank/issues/17).
+
+Also deferred: educational onboarding walkthrough. (The visual design system — palette, type, icon — is in place; see `BUILD_NOTES.md` § Visual design.) See [GitHub Issues](https://github.com/elsmrna/anyrank/issues) for the tracked items and `Spec.md` "Open TBDs" for the full list.
 
 ## Where to look first
 

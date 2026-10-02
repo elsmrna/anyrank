@@ -74,7 +74,10 @@ final class Repository {
     /// immediate push of what we just pulled. This breaks the symmetry
     /// of every other mutation in this class, and is the only safe
     /// shape for the pull-then-push model.
-    func replaceLists(_ newLists: [RankList]) {
+    ///
+    /// Restoring a local export passes `notifySync: true`: there the
+    /// incoming lists are the new truth, and the Sheet should follow.
+    func replaceLists(_ newLists: [RankList], notifySync: Bool = false) {
         let newIDs = Set(newLists.map(\.id))
         // Capture lists that exist locally but not in the incoming set,
         // BEFORE we reassign — we need the RankList references to call
@@ -83,12 +86,15 @@ final class Repository {
 
         lists = newLists.sorted { $0.createdAt > $1.createdAt }
 
+        let observer = notifySync ? syncObserver : nil
         Task { [storage] in
             for old in removed {
                 try? await storage.delete(old)
+                observer?.didDeleteList(old)
             }
             for newList in newLists {
                 try? await storage.save(newList)
+                observer?.didChangeList(newList)
             }
         }
     }

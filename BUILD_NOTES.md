@@ -88,7 +88,7 @@ App icon, accent color, and launch background live in `AnyRank/Assets.xcassets`.
 
 Onboarding is not implemented — first launch drops the user into the empty-state of `ListsHomeView`, which has a primary "Create your first list" button. That's adequate for v1; full onboarding can come later.
 
-JSON export remains out of scope — Sheets sync covers the backup case for signed-in users, and the dedicated JSON export issue ([#17](https://github.com/elsmrna/anyrank/issues/17)) is the right home for the local-only fallback.
+Export and restore live in Settings → Your data (`ListArchive`, `ZipWriter`). An export is a .zip of the on-disk format, `index.json` plus each list's CSVs, written by a `FileListStorage` pointed at a staging folder. Restore reads the zip with `ZipReader`, loads it the same way, and swaps it in with `Repository.replaceLists(_:notifySync: true)`, so a Sheet follows along when sync is on. Import queues aren't included. See [#17](https://github.com/elsmrna/anyrank/issues/17).
 
 ## What might trip you up
 
