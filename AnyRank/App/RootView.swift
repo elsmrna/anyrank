@@ -11,6 +11,9 @@ struct RootView: View {
         NavigationStack(path: $router.path) {
             ListsHomeView()
         }
+        #if DEBUG
+        .screenshotRoute()
+        #endif
     }
 }
 

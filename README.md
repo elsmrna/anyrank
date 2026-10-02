@@ -12,11 +12,55 @@ anyrank/
 ├── Project.yml             xcodegen config — generates AnyRank.xcodeproj
 ├── Secrets.xcconfig        Local secrets (gitignored)
 ├── Secrets.xcconfig.example Template — copy and fill in
+├── docs/screenshots/       README screenshots (generated)
+├── scripts/                Dev scripts (screenshots.sh)
 ├── AnyRank/                Source for the iOS app target
 ├── AnyRankTests/           Unit tests (ranking algorithm)
 ├── AnyRankSnapshotTests/   Snapshot tests (visual regression)
 └── README.md               This file
 ```
+
+<table>
+<tr>
+<td align="center" width="20%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/home-dark.png">
+  <img src="docs/screenshots/home-light.png" alt="Your lists" width="180">
+</picture>
+<br><sub>Your lists</sub>
+</td>
+<td align="center" width="20%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/list-dark.png">
+  <img src="docs/screenshots/list-light.png" alt="A ranked list" width="180">
+</picture>
+<br><sub>A ranked list</sub>
+</td>
+<td align="center" width="20%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/bucketPick-dark.png">
+  <img src="docs/screenshots/bucketPick-light.png" alt="Pick a bucket" width="180">
+</picture>
+<br><sub>Pick a bucket</sub>
+</td>
+<td align="center" width="20%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/compare-dark.png">
+  <img src="docs/screenshots/compare-light.png" alt="Compare head to head" width="180">
+</picture>
+<br><sub>Compare head to head</sub>
+</td>
+<td align="center" width="20%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/importSources-dark.png">
+  <img src="docs/screenshots/importSources-light.png" alt="Import a collection" width="180">
+</picture>
+<br><sub>Import a collection</sub>
+</td>
+</tr>
+</table>
+
+Screenshots match your GitHub theme. To regenerate them after a UI change, run `scripts/screenshots.sh` (see [Updating screenshots](#updating-screenshots)).
 
 ## Installing the dev build on your iPhone
 
@@ -48,13 +92,13 @@ You can leave every value in `Secrets.xcconfig` empty. Search and imports will u
 
 **3. Make the bundle ID yours** (skip this if you're the repo owner). Bundle IDs are tied to one Apple account. In `Project.yml`, change `bundleIdPrefix` and `PRODUCT_BUNDLE_IDENTIFIER` to something unique, such as `com.yourname.anyrank`, then run `xcodegen generate` again.
 
-**4. Sign it.** In Xcode, select the **AnyRank** target, open **Signing & Capabilities**, tick **Automatically manage signing**, and set **Team** to your Apple ID. If your Apple ID isn't listed, add it under **Xcode → Settings → Accounts**. Each `xcodegen generate` clears this setting, so pick the team again after you regenerate.
+**4. Sign it.** In Xcode, select the **AnyRank** target, open **Signing & Capabilities**, tick **Automatically manage signing**, and set **Team** to your Apple ID. If your Apple ID isn't listed, add it under **Xcode → Settings → Accounts**. `xcodegen generate` clears this setting. To keep it, copy the `DEVELOPMENT_TEAM` value from the target's build settings into `Secrets.xcconfig`.
 
 **5. Prepare the phone** (first time only). Plug it in, unlock it, and tap **Trust This Computer**. Then turn on **Settings → Privacy & Security → Developer Mode** and let the phone restart.
 
 **6. Install.** Choose your iPhone from the device menu at the top of Xcode and press **Cmd-R**. The first time, iOS blocks the app until you go to **Settings → General → VPN & Device Management**, tap your Apple ID, and choose **Trust**. After that, open AnyRank from the home screen.
 
-**Updating to a newer version.** Run `git pull` (or download the newer zip), then `xcodegen generate`, pick your team again, and press **Cmd-R**. The new build installs over the old one and your lists are kept. **Settings → Version** in the app shows which version you're running.
+**Updating to a newer version.** Run `git pull` (or download the newer zip), then `xcodegen generate`, and press **Cmd-R**. The new build installs over the old one and your lists are kept. **Settings → Version** in the app shows which version you're running.
 
 **With a free Apple ID, the app stops opening after 7 days.** Plug the phone back in and press **Cmd-R** to sign it again. Your data is not lost. A paid Apple Developer account extends this to a year. For wireless installs, the free-tier limits, and fixes for signing errors, see [LocalDev.md § 8](LocalDev.md#8-shipping-to-a-physical-device).
 
@@ -101,3 +145,17 @@ Also deferred: educational onboarding walkthrough, JSON export. (The visual desi
 ## Where to look first
 
 The ranking algorithm is the product. Read `AnyRank/Algorithm/RankingSession.swift` and `AnyRankTests/RankingSessionTests.swift` first. Then the data model in `AnyRank/Models/`, then the add-item flow in `AnyRank/Views/AddItem/`. For the auth layer, start with `AnyRank/Auth/AuthSession.swift`.
+
+## Updating screenshots
+
+The README screenshots are generated, not hand-captured. To refresh them, run:
+
+```bash
+scripts/screenshots.sh
+```
+
+The script builds a Debug build for the iPhone 17 Pro Simulator and installs it fresh with the demo data (`-seedDemoData`). It then opens each screen through the Debug-only `-screenshotRoute` launch argument and captures it in light and dark mode with a clean 9:41 status bar. The PNGs land in `docs/screenshots/`. A full run takes about a minute.
+
+- **One screen only:** pass route names, e.g. `scripts/screenshots.sh compare`.
+- **Different simulator or image size:** set `DEVICE=...` or `WIDTH=...`.
+- **Add a screen:** add a case to `ScreenshotRoute` in `AnyRank/Preview/ScreenshotRoute.swift`, add it to `ROUTES` in the script, and add a cell to the table at the top of this README.
