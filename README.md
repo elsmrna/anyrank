@@ -22,38 +22,45 @@ anyrank/
 
 <table>
 <tr>
-<td align="center" width="20%">
+<td align="center" width="16%">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/home-dark.png">
-  <img src="docs/screenshots/home-light.png" alt="Your lists" width="180">
+  <img src="docs/screenshots/home-light.png" alt="Your lists" width="150">
 </picture>
 <br><sub>Your lists</sub>
 </td>
-<td align="center" width="20%">
+<td align="center" width="16%">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/list-dark.png">
-  <img src="docs/screenshots/list-light.png" alt="A ranked list" width="180">
+  <img src="docs/screenshots/list-light.png" alt="A ranked list" width="150">
 </picture>
 <br><sub>A ranked list</sub>
 </td>
-<td align="center" width="20%">
+<td align="center" width="16%">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/bucketPick-dark.png">
-  <img src="docs/screenshots/bucketPick-light.png" alt="Pick a bucket" width="180">
+  <img src="docs/screenshots/bucketPick-light.png" alt="Pick a bucket" width="150">
 </picture>
 <br><sub>Pick a bucket</sub>
 </td>
-<td align="center" width="20%">
+<td align="center" width="16%">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/compare-dark.png">
-  <img src="docs/screenshots/compare-light.png" alt="Compare head to head" width="180">
+  <img src="docs/screenshots/compare-light.png" alt="Compare head to head" width="150">
 </picture>
 <br><sub>Compare head to head</sub>
 </td>
-<td align="center" width="20%">
+<td align="center" width="16%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/map-dark.png">
+  <img src="docs/screenshots/map-light.png" alt="Places on a map" width="150">
+</picture>
+<br><sub>Places on a map</sub>
+</td>
+<td align="center" width="16%">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/importSources-dark.png">
-  <img src="docs/screenshots/importSources-light.png" alt="Import a collection" width="180">
+  <img src="docs/screenshots/importSources-light.png" alt="Import a collection" width="150">
 </picture>
 <br><sub>Import a collection</sub>
 </td>

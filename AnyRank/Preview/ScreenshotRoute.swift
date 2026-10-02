@@ -10,6 +10,7 @@ enum ScreenshotRoute: String, CaseIterable {
     case bucketPick
     case compare
     case importSources
+    case map
 
     static var current: ScreenshotRoute? {
         UserDefaults.standard.string(forKey: "screenshotRoute").flatMap(Self.init(rawValue:))
@@ -71,8 +72,14 @@ private struct ScreenshotRouteModifier: ViewModifier {
     }
 
     private func apply() {
-        guard !applied, let route = ScreenshotRoute.current,
-              let books = repository.lists
+        guard !applied, let route = ScreenshotRoute.current else { return }
+        if route == .map {
+            guard let restaurants = repository.lists.first(where: { $0.name == "Restaurants — LA" }) else { return }
+            applied = true
+            router.path = [restaurants.id]
+            return
+        }
+        guard let books = repository.lists
                   .filter({ $0.category == .books })
                   .max(by: { $0.items.count < $1.items.count })
         else { return }
@@ -90,6 +97,8 @@ private struct ScreenshotRouteModifier: ViewModifier {
             sheet = .placement(coordinator)
         case .importSources:
             sheet = .importSources
+        case .map:
+            break
         }
     }
 

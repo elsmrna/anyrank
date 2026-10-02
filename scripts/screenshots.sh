@@ -16,7 +16,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-ROUTES=(home list bucketPick compare importSources)
+ROUTES=(home list bucketPick compare map importSources)
 [[ $# -gt 0 ]] && ROUTES=("$@")
 
 DEVICE="${DEVICE:-iPhone 17 Pro}"
@@ -64,10 +64,14 @@ xcrun simctl status_bar "$UDID" override \
 # Start from an empty container so the demo seed always runs.
 xcrun simctl uninstall "$UDID" "$BUNDLE_ID" 2>/dev/null || true
 xcrun simctl install "$UDID" "$APP"
+# The map screen centers on the user: grant location and stand in downtown LA,
+# near the demo places, so no permission prompt lands in the shot.
+xcrun simctl privacy "$UDID" grant location "$BUNDLE_ID"
+xcrun simctl location "$UDID" set 34.0522,-118.2437
 
 mkdir -p "$OUT_DIR"
 ORIGINAL_APPEARANCE=$(xcrun simctl ui "$UDID" appearance)
-trap 'xcrun simctl ui "$UDID" appearance "$ORIGINAL_APPEARANCE"; xcrun simctl status_bar "$UDID" clear; xcrun simctl shutdown "$UDID" 2>/dev/null || true' EXIT
+trap 'xcrun simctl ui "$UDID" appearance "$ORIGINAL_APPEARANCE"; xcrun simctl status_bar "$UDID" clear; xcrun simctl location "$UDID" clear; xcrun simctl shutdown "$UDID" 2>/dev/null || true' EXIT
 
 for appearance in light dark; do
   xcrun simctl ui "$UDID" appearance "$appearance"
@@ -75,7 +79,8 @@ for appearance in light dark; do
     xcrun simctl terminate "$UDID" "$BUNDLE_ID" 2>/dev/null || true
     xcrun simctl launch "$UDID" "$BUNDLE_ID" \
       -seedDemoData -hasCompletedOnboarding YES -screenshotRoute "$route" >/dev/null
-    sleep "$SETTLE"
+    # Map tiles take longer to arrive than app screens.
+    if [[ "$route" == map ]]; then sleep $((SETTLE + 4)); else sleep "$SETTLE"; fi
     file="$OUT_DIR/$route-$appearance.png"
     xcrun simctl io "$UDID" screenshot --type=png "$file" >/dev/null 2>&1
     sips --resampleWidth "$WIDTH" "$file" >/dev/null

@@ -57,6 +57,7 @@ targets:
         CFBundleDisplayName: AnyRank
         CFBundleShortVersionString: "0.1.1"
         CFBundleVersion: "2"
+        NSLocationWhenInUseUsageDescription: AnyRank uses your location to center a list's map on places near you. It stays on your device.
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIRequiresFullScreen: false

@@ -11,6 +11,8 @@ struct ListDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var addingItem = false
+    /// Place lists can swap the ranked list for a map of the same items.
+    @State private var showingMap = Self.opensOnMap
     @State private var rerankPromptDismissed = false
     @State private var pendingRerank: PendingRerank?
 
@@ -38,6 +40,9 @@ struct ListDetailView: View {
         Group {
             if list.items.isEmpty && importSession == nil {
                 emptyState
+            } else if showingMap && canShowMap {
+                ListMapView(list: list)
+                    .transition(.opacity)
             } else {
                 itemList
             }
@@ -74,7 +79,12 @@ struct ListDetailView: View {
         // floating button would.
         .safeAreaInset(edge: .bottom) {
             if !list.items.isEmpty || importSession != nil {
-                addButton
+                HStack(spacing: 10) {
+                    addButton
+                    if canShowMap {
+                        mapToggle
+                    }
+                }
                     .padding(.horizontal, Theme.gutter)
                     .padding(.top, 12)
                     .padding(.bottom, 8)
@@ -140,6 +150,37 @@ struct ListDetailView: View {
             try? await Task.sleep(for: .milliseconds(450))
             ranking = true
         }
+    }
+
+    private static var opensOnMap: Bool {
+        #if DEBUG
+        ScreenshotRoute.current == .map
+        #else
+        false
+        #endif
+    }
+
+    private var canShowMap: Bool {
+        list.isPlaceList && !list.items.isEmpty
+    }
+
+    /// Small round button beside "Add" that swaps between the ranked list
+    /// and the map.
+    private var mapToggle: some View {
+        Button {
+            withAnimation(Theme.spring) { showingMap.toggle() }
+        } label: {
+            Image(systemName: showingMap ? "list.bullet" : "map")
+                .font(.system(size: 19, weight: .semibold))
+                .foregroundStyle(Theme.accent)
+                .frame(width: 52, height: 52)
+                .background(Theme.surface, in: Circle())
+                .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 0.5))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.pressable)
+        .sensoryFeedback(.selection, trigger: showingMap)
+        .accessibilityLabel(showingMap ? "Show list" : "Show map")
     }
 
     /// Primary normally; quiet while an import is underway, so the import

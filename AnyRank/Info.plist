@@ -35,6 +35,8 @@
 	<string>$(GOOGLE_OAUTH_CLIENT_ID)</string>
 	<key>GooglePlacesAPIKey</key>
 	<string>$(GOOGLE_PLACES_API_KEY)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>AnyRank uses your location to center a list's map on places near you. It stays on your device.</string>
 	<key>SpotifyClientID</key>
 	<string>$(SPOTIFY_CLIENT_ID)</string>
 	<key>SpotifyClientSecret</key>

@@ -18,6 +18,7 @@ struct SettingsView: View {
     @State private var pendingRestore: [RankList]?
     @State private var restoreMessage: String?
     @State private var restoreError: String?
+    @AppStorage(LocationProvider.useOnMapsKey) private var useLocationOnMaps = true
 
     var body: some View {
         NavigationStack {
@@ -26,6 +27,7 @@ struct SettingsView: View {
                     accountSection
                     syncSection
                     dataSection
+                    mapsSection
                     aboutSection
                 }
                 .listRowBackground(Theme.surface)
@@ -242,6 +244,18 @@ struct SettingsView: View {
         importStore.prune(keeping: Set(lists.map(\.id)))
         Task { exportURL = try? await ListArchive.export(lists) }
         restoreMessage = "Restored \(lists.count) \(lists.count == 1 ? "list" : "lists")."
+    }
+
+    // MARK: Maps
+
+    private var mapsSection: some View {
+        Section {
+            Toggle("Show my location on maps", isOn: $useLocationOnMaps)
+        } header: {
+            Text("Maps")
+        } footer: {
+            Text("When something on a list is within 5 miles, its map opens centered on you. Your location stays on this device.")
+        }
     }
 
     // MARK: About
