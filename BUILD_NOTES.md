@@ -84,7 +84,7 @@ The UI is themed from a single set of tokens in `AnyRank/Design/Theme.swift` (co
 
 The add-item and re-rank sheets share `PlacementFlowView`: each step is a real `NavigationStack` push driven by `AddItemCoordinator.path`, so back and edge-swipe step the state machine back. All category searches share `CatalogSearchScreen`, which debounces through `.task(id:)` (a new keystroke cancels the in-flight request) and keeps results on screen while the next query loads.
 
-App icon, accent color, and launch background live in `AnyRank/Assets.xcassets`. For eyeballing the UI with data, launch a Debug build with the `-seedDemoData` argument — an empty store gets filled with the preview datasets (see `Preview/DemoSeed.swift`).
+App icon, accent color, and launch background live in `AnyRank/Assets.xcassets`. The icon ("Head to head": two cards, the front one checked) is drawn by `swift scripts/app-icon.swift`, which writes the light, dark, and tinted PNGs. Edit the palettes or `artworkScale` there and rerun it rather than editing the PNGs. For eyeballing the UI with data, launch a Debug build with the `-seedDemoData` argument — an empty store gets filled with the preview datasets (see `Preview/DemoSeed.swift`).
 
 Onboarding is not implemented — first launch drops the user into the empty-state of `ListsHomeView`, which has a primary "Create your first list" button. That's adequate for v1; full onboarding can come later.
 

@@ -13,7 +13,7 @@ anyrank/
 ├── Secrets.xcconfig        Local secrets (gitignored)
 ├── Secrets.xcconfig.example Template — copy and fill in
 ├── docs/screenshots/       README screenshots (generated)
-├── scripts/                Dev scripts (screenshots.sh)
+├── scripts/                Dev scripts (screenshots.sh, app-icon.swift)
 ├── AnyRank/                Source for the iOS app target
 ├── AnyRankTests/           Unit tests (ranking algorithm)
 ├── AnyRankSnapshotTests/   Snapshot tests (visual regression)
