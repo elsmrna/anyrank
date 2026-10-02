@@ -76,7 +76,7 @@ struct BucketPickerScreen: View {
                     .font(.display(.largeTitle))
                     .foregroundStyle(Theme.textPrimary)
                 HStack(spacing: 14) {
-                    if category.hasArtwork {
+                    if category.hasArtwork || artworkURLString != nil {
                         ArtworkView(urlString: artworkURLString, category: category, width: 56, cornerRadius: 8)
                     } else {
                         CategoryIconTile(category: category, size: 48)

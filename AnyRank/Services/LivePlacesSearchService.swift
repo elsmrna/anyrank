@@ -17,6 +17,11 @@ import GooglePlaces
 /// itself, then resume with that. Downstream code never touches an
 /// unsandboxed SDK reference.
 ///
+/// Threading: the SDK throws `GMSThreadException` unless its methods are
+/// called on the main thread, so every bridge below is `@MainActor`.
+/// Callers can be anywhere (search runs from a view task, Find from the
+/// map, photos from `ArtworkCache`); the `await` hops to main.
+///
 /// Configuration: `GooglePlacesBootstrap.configure()` must have been
 /// called once at app startup with a valid API key. If the key was
 /// missing, `AnyRankApp` should be wiring `MockPlacesSearchService`
@@ -47,11 +52,47 @@ final class LivePlacesSearchService: PlacesSearchService, @unchecked Sendable {
         return results
     }
 
+    // MARK: - Photos
+
+    /// The place's first photo, at most 480px on its long edge, for
+    /// `PlacePhotos.loader`. Two billed requests (place details with the
+    /// photos field, then the photo itself), made once per place per device
+    /// thanks to `ArtworkCache`. Not part of an autocomplete session.
+    @MainActor
+    static func photo(forPlaceID placeID: String) async -> PlacePhotos.Fetch {
+        await withCheckedContinuation { continuation in
+            let request = GMSFetchPlaceRequest(
+                placeID: placeID,
+                placeProperties: [GMSPlaceProperty.photos.rawValue],
+                sessionToken: nil
+            )
+            GMSPlacesClient.shared().fetchPlace(with: request) { place, error in
+                if error != nil {
+                    continuation.resume(returning: .failed)
+                    return
+                }
+                guard let metadata = place?.photos?.first else {
+                    continuation.resume(returning: .none)
+                    return
+                }
+                let photoRequest = GMSFetchPhotoRequest(photoMetadata: metadata, maxSize: CGSize(width: 480, height: 480))
+                GMSPlacesClient.shared().fetchPhoto(with: photoRequest) { image, error in
+                    if let data = image?.jpegData(compressionQuality: 0.85) {
+                        continuation.resume(returning: .image(data))
+                    } else {
+                        continuation.resume(returning: error == nil ? .none : .failed)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - SDK bridges
 
     /// Returns place IDs only. Bridging `[GMSAutocompletePrediction]` out
     /// of the callback would violate Sendable — extract the `String`
     /// place ID inside the callback instead.
+    @MainActor
     private func findPredictionIDs(query: String, kind: PlacesSearchKind) async throws -> [String] {
         let filter = GMSAutocompleteFilter()
         // Bias by establishment type when the list has one — Places'
@@ -84,6 +125,7 @@ final class LivePlacesSearchService: PlacesSearchService, @unchecked Sendable {
     /// Same Sendable rationale as `findPredictionIDs` — copy the fields
     /// we need out of the SDK object inside the callback so nothing
     /// non-Sendable ever crosses the continuation.
+    @MainActor
     private func fetchDetails(placeID: String) async throws -> PlaceDetails? {
         // Only fetch the fields we actually use — the SDK bills per-field.
         let fields: GMSPlaceField = [.placeID, .name, .formattedAddress, .coordinate]

@@ -104,7 +104,7 @@ struct ItemDetailView: View {
 
     private var hero: some View {
         VStack(spacing: 14) {
-            if list.category.hasArtwork {
+            if list.showsArtwork {
                 ArtworkView(
                     urlString: RankingApplier.comparisonImageURLString(for: item, in: list),
                     category: list.category,

@@ -103,37 +103,53 @@ actor ArtworkCache {
             return .missing
         }
 
-        let source: URL
-        switch await resolve(url) {
-        case .found(let resolved): source = resolved
-        case .none:
-            markMissing(missingFile)
-            return .missing
-        case .failed:
-            return .failed
+        let data: Data
+        if let placeID = PlacePhotos.placeID(from: url) {
+            // No Places key: show the placeholder, but don't remember a
+            // miss, since a key may be configured later.
+            guard let loader = PlacePhotos.loader else { return .missing }
+            switch await loader(placeID) {
+            case .image(let photo): data = photo
+            case .none:
+                markMissing(missingFile)
+                return .missing
+            case .failed:
+                return .failed
+            }
+        } else {
+            let source: URL
+            switch await resolve(url) {
+            case .found(let resolved): source = resolved
+            case .none:
+                markMissing(missingFile)
+                return .missing
+            case .failed:
+                return .failed
+            }
+            do {
+                let (body, response) = try await session.data(from: source)
+                let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                if status == 404 {
+                    markMissing(missingFile)
+                    return .missing
+                }
+                guard status == 200 else { return .failed }
+                data = body
+            } catch {
+                return .failed
+            }
         }
 
-        do {
-            let (data, response) = try await session.data(from: source)
-            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-            if status == 404 {
-                markMissing(missingFile)
-                return .missing
-            }
-            guard status == 200 else { return .failed }
-            guard let thumbnail = Self.thumbnail(from: data) else {
-                // Undecodable or a 1×1 stand-in for "no cover".
-                markMissing(missingFile)
-                return .missing
-            }
-            if let jpeg = thumbnail.jpegData(compressionQuality: 0.82) {
-                try? jpeg.write(to: imageFile, options: .atomic)
-            }
-            Self.memory.setObject(thumbnail, forKey: key as NSString)
-            return .image(thumbnail)
-        } catch {
-            return .failed
+        guard let thumbnail = Self.thumbnail(from: data) else {
+            // Undecodable or a 1×1 stand-in for "no cover".
+            markMissing(missingFile)
+            return .missing
         }
+        if let jpeg = thumbnail.jpegData(compressionQuality: 0.82) {
+            try? jpeg.write(to: imageFile, options: .atomic)
+        }
+        Self.memory.setObject(thumbnail, forKey: key as NSString)
+        return .image(thumbnail)
     }
 
     private enum Resolution {

@@ -415,7 +415,7 @@ private struct ListCard: View {
     /// Only fan out covers when there's real art; a row of placeholders
     /// is just noise.
     private var hasCoverArt: Bool {
-        list.category.hasArtwork
+        list.showsArtwork
             && topItems.contains { RankingApplier.comparisonImageURLString(for: $0, in: list) != nil }
     }
 

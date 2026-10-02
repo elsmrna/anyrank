@@ -11,6 +11,12 @@ extension RankList {
         }
     }
 
+    /// Whether rows, cards, and item detail show artwork: catalog
+    /// categories always do, and place lists show a photo of each place.
+    var showsArtwork: Bool {
+        category.hasArtwork || isPlaceList
+    }
+
     var placesSearchKind: PlacesSearchKind {
         switch category {
         case .restaurants: return .restaurant

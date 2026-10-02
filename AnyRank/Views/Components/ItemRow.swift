@@ -18,10 +18,10 @@ struct ItemRow: View {
                     .frame(minWidth: 20, alignment: .trailing)
             }
 
-            if let category = item.list?.category, category.hasArtwork {
+            if let list = item.list, list.showsArtwork {
                 ArtworkView(
-                    urlString: item.list.flatMap { RankingApplier.comparisonImageURLString(for: item, in: $0) },
-                    category: category,
+                    urlString: RankingApplier.comparisonImageURLString(for: item, in: list),
+                    category: list.category,
                     width: 36,
                     cornerRadius: 6
                 )

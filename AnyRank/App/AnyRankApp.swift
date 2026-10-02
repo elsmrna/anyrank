@@ -76,6 +76,7 @@ struct AnyRankApp: App {
         // usable without a real key.
         if GooglePlacesBootstrap.configure() != nil {
             self.placesService = LivePlacesSearchService()
+            PlacePhotos.loader = { placeID in await LivePlacesSearchService.photo(forPlaceID: placeID) }
         } else {
             self.placesService = MockPlacesSearchService()
         }

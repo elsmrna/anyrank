@@ -102,9 +102,8 @@ enum RankingApplier {
         return .init(bucketContents: bucketContents)
     }
 
-    /// Category-appropriate thumbnail URL for the comparison card.
-    /// Places don't have photos wired up (deferred issue), so they
-    /// return nil and render a placeholder in the card.
+    /// Category-appropriate thumbnail URL for the comparison card. Places
+    /// use a photo reference by place ID (see `PlacePhotos`).
     static func comparisonImageURLString(for item: RankItem, in list: RankList) -> String? {
         switch list.category {
         case .movies: return item.posterURLString
@@ -112,7 +111,8 @@ enum RankingApplier {
         case .anime, .manga: return item.coverURLString
         case .games:  return item.coverURLString
         case .albums, .songs: return item.coverURLString
-        case .restaurants, .bars, .stays, .custom: return nil
+        case .restaurants, .bars, .stays: return PlacePhotos.url(forPlaceID: item.placeID)
+        case .custom: return list.linksToMapsLocation ? PlacePhotos.url(forPlaceID: item.placeID) : nil
         }
     }
 

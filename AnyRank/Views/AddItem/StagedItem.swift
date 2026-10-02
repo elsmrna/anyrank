@@ -179,7 +179,7 @@ struct StagedItem: Identifiable, Equatable, Codable {
         case .games:  return game?.coverURL?.absoluteString
         case .albums: return album?.coverURL?.absoluteString
         case .songs:  return song?.coverURL?.absoluteString
-        case .restaurants, .bars, .stays, .custom: return nil
+        case .restaurants, .bars, .stays, .custom: return PlacePhotos.url(forPlaceID: place?.id)
         }
     }
 
