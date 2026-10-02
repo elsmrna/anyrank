@@ -26,9 +26,24 @@ enum DemoSeed {
             for item in list.items where list.category == .books {
                 item.coverURLString = coverURLs[item.name]
             }
+            list.lastUsedAt = recentUse[list.name].map { Date(timeIntervalSinceNow: -$0 * 3600) } ?? list.createdAt
             repository.addList(list)
         }
     }
+
+    /// Hours since each demo list was last used, so the home screen's Recent
+    /// sort shows a believable order, including a Custom list near the top.
+    private static let recentUse: [String: Double] = [
+        "Restaurants — LA": 1,
+        "Weekend Spots": 3,
+        "Books — 2024": 20,
+        "Movies": 30,
+        "Games — All-time": 50,
+        "Songs — All-time": 80,
+        "Bars — Downtown": 120,
+        "Anime — All-time": 200,
+        "Books": 400,
+    ]
 
     /// Open Library cover CDN, keyed by title.
     private static let coverURLs: [String: String] = [

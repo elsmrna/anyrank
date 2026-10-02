@@ -51,9 +51,20 @@ final class Repository {
     }
 
     /// Mark a list as changed so its CSV gets rewritten and sync is notified.
-    /// Use after any in-place edit (name change, settings, items).
+    /// Use after any in-place edit (name change, settings, items). Counts
+    /// as using the list for the home screen's "Recent" sort.
     func touch(_ list: RankList) {
+        list.lastUsedAt = Date()
         persist(list)
+    }
+
+    /// Record that the list was opened. Saved locally only: opening isn't
+    /// worth a Sheets push, and the date rides along with the next change.
+    func markUsed(_ list: RankList) {
+        list.lastUsedAt = Date()
+        Task { [storage] in
+            try? await storage.save(list)
+        }
     }
 
     func deleteList(_ list: RankList) {

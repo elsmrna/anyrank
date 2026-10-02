@@ -114,6 +114,8 @@ struct ListDetailView: View {
         // An import was just created for this list — start ranking once
         // any sheet that created it has finished dismissing.
         .onAppear(perform: startRequestedSpree)
+        // Opening a list counts as using it, for the home screen's Recent sort.
+        .onAppear { repository.markUsed(list) }
         .onChange(of: router.spreeRequestListID) { _, _ in startRequestedSpree() }
         .alert("Rename list", isPresented: $renaming) {
             TextField("List name", text: $renameDraft)

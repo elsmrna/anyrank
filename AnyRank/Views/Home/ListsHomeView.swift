@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Top-level screen showing every list the user has, grouped by category.
+/// Top-level screen showing every list the user has, sorted by recent use,
+/// type, or name.
 struct ListsHomeView: View {
     @Environment(Repository.self) private var repository
     @Environment(AuthSession.self) private var auth
@@ -9,6 +10,10 @@ struct ListsHomeView: View {
     @State private var creatingList: CreateListRequest?
     @State private var showingSettings = false
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+    @AppStorage("homeSortOrder") private var sortOrder: ListSort.Order = .recent
+    @AppStorage("homeSortReversed") private var sortReversed = false
+
+    private var sort: ListSort { ListSort(order: sortOrder, reversed: sortReversed) }
 
     /// Rename dialog state. `renamingList` is the list being edited (nil
     /// when the dialog isn't showing); `renameDraft` is the working value
@@ -223,37 +228,18 @@ struct ListsHomeView: View {
                 Text(summaryLine)
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
-                    .padding(.bottom, 8)
 
-                ForEach(Category.allCases) { category in
-                    let categoryLists = lists.filter { $0.category == category }
-                    if !categoryLists.isEmpty {
+                sortControls
+                    .padding(.bottom, 4)
+
+                ForEach(sort.sections(lists), id: \.category) { section in
+                    if let category = section.category {
                         SectionLabel(category.displayName)
                             .padding(.top, 12)
                             .padding(.leading, 4)
-                        ForEach(categoryLists) { list in
-                            NavigationLink(value: list.id) {
-                                ListCard(
-                                    list: list,
-                                    pendingImportCount: importStore.session(for: list.id)?.pending.count,
-                                    importSource: importStore.session(for: list.id)?.source
-                                )
-                            }
-                            .buttonStyle(.pressable)
-                            .contextMenu {
-                                Button {
-                                    beginRename(list)
-                                } label: {
-                                    Label("Rename", systemImage: "pencil")
-                                }
-                                Button(role: .destructive) {
-                                    deletingList = list
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                            .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                        }
+                    }
+                    ForEach(section.lists) { list in
+                        listRow(list)
                     }
                 }
             }
@@ -262,11 +248,102 @@ struct ListsHomeView: View {
         }
     }
 
+    private func listRow(_ list: RankList) -> some View {
+        NavigationLink(value: list.id) {
+            ListCard(
+                list: list,
+                pendingImportCount: importStore.session(for: list.id)?.pending.count,
+                importSource: importStore.session(for: list.id)?.source
+            )
+        }
+        .buttonStyle(.pressable)
+        .contextMenu {
+            Button {
+                beginRename(list)
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+            Button(role: .destructive) {
+                deletingList = list
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+    }
+
+    // MARK: Sorting
+
+    /// "Sort by" menu plus a direction toggle, under the summary line.
+    private var sortControls: some View {
+        HStack(spacing: 8) {
+            Menu {
+                Picker("Sort by", selection: sortOrderBinding) {
+                    ForEach(ListSort.Order.allCases) { order in
+                        Label(order.title, systemImage: order.systemImage).tag(order)
+                    }
+                }
+            } label: {
+                SortChip(systemImage: sort.order.systemImage, title: sort.order.title, showsChevron: true)
+            }
+            .accessibilityLabel("Sort by \(sort.order.title)")
+
+            Button {
+                withAnimation(Theme.spring) { sortReversed.toggle() }
+            } label: {
+                SortChip(systemImage: "arrow.up.arrow.down", title: sort.directionTitle)
+            }
+            .buttonStyle(.pressable)
+            .accessibilityLabel("Order: \(sort.directionTitle)")
+            .accessibilityHint("Reverses the order")
+
+            Spacer()
+        }
+        .sensoryFeedback(.selection, trigger: sort)
+    }
+
+    /// Changing what to sort by starts from that sort's natural direction.
+    private var sortOrderBinding: Binding<ListSort.Order> {
+        Binding(get: { sortOrder }, set: { newValue in
+            withAnimation(Theme.spring) {
+                sortOrder = newValue
+                sortReversed = false
+            }
+        })
+    }
+
     private var summaryLine: String {
         let itemCount = lists.reduce(0) { $0 + $1.items.count }
         let listPart = "\(lists.count) list\(lists.count == 1 ? "" : "s")"
         let itemPart = "\(itemCount) thing\(itemCount == 1 ? "" : "s") ranked"
         return "\(listPart) · \(itemPart)"
+    }
+}
+
+/// Small capsule used by the home screen's sort controls.
+private struct SortChip: View {
+    let systemImage: String
+    let title: String
+    var showsChevron = false
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.semibold))
+            Text(title)
+                .font(.subheadline.weight(.medium))
+            if showsChevron {
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Theme.textTertiary)
+            }
+        }
+        .foregroundStyle(Theme.textSecondary)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 6)
+        .background(Theme.surface, in: Capsule())
+        .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 0.5))
+        .contentShape(Capsule())
     }
 }
 

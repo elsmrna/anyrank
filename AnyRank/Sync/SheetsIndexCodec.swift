@@ -24,7 +24,8 @@ enum SheetsIndexCodec {
         "custom_field_names",
         "rerank_prompt_threshold",
         "additions_since_last_rerank_prompt",
-        "links_to_maps_location"
+        "links_to_maps_location",
+        "last_used_at"
     ]
 
     @MainActor
@@ -40,7 +41,8 @@ enum SheetsIndexCodec {
                 encodeCustomFieldNames(list.customFieldNames),
                 String(list.rerankPromptThreshold),
                 String(list.additionsSinceLastRerankPrompt),
-                list.linksToMapsLocation ? "true" : "false"
+                list.linksToMapsLocation ? "true" : "false",
+                isoFormatter.string(from: list.lastUsedAt)
             ])
         }
         return CSV.encode(rows: rows)
@@ -69,6 +71,7 @@ enum SheetsIndexCodec {
             // Older sheets pre-date this column — treat missing or empty
             // as false rather than rejecting the row.
             let linksToMaps = field(row, columnIndex, "links_to_maps_location").map { $0.lowercased() == "true" } ?? false
+            let lastUsedAt = field(row, columnIndex, "last_used_at").flatMap { parseDate($0) }
 
             entries.append(IndexEntry(
                 id: id,
@@ -78,7 +81,8 @@ enum SheetsIndexCodec {
                 customFieldNames: customFields,
                 rerankPromptThreshold: threshold,
                 additionsSinceLastRerankPrompt: additions,
-                linksToMapsLocation: linksToMaps
+                linksToMapsLocation: linksToMaps,
+                lastUsedAt: lastUsedAt
             ))
         }
         return entries
@@ -135,7 +139,8 @@ extension IndexEntry {
         customFieldNames: [String],
         rerankPromptThreshold: Int,
         additionsSinceLastRerankPrompt: Int,
-        linksToMapsLocation: Bool = false
+        linksToMapsLocation: Bool = false,
+        lastUsedAt: Date? = nil
     ) {
         self.id = id
         self.name = name
@@ -145,5 +150,6 @@ extension IndexEntry {
         self.rerankPromptThreshold = rerankPromptThreshold
         self.additionsSinceLastRerankPrompt = additionsSinceLastRerankPrompt
         self.linksToMapsLocation = linksToMapsLocation
+        self.lastUsedAt = lastUsedAt
     }
 }

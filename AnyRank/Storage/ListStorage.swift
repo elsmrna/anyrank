@@ -179,6 +179,9 @@ struct IndexEntry: Codable, Sendable {
     /// ignore it. Optional in the decoded shape so older index.json
     /// files written before this field existed still load cleanly.
     var linksToMapsLocation: Bool?
+    /// Optional for index files written before the home sort existed;
+    /// those lists fall back to `createdAt`.
+    var lastUsedAt: Date?
 
     @MainActor
     init(from list: RankList) {
@@ -190,6 +193,7 @@ struct IndexEntry: Codable, Sendable {
         self.rerankPromptThreshold = list.rerankPromptThreshold
         self.additionsSinceLastRerankPrompt = list.additionsSinceLastRerankPrompt
         self.linksToMapsLocation = list.linksToMapsLocation
+        self.lastUsedAt = list.lastUsedAt
     }
 
     @MainActor
@@ -199,6 +203,7 @@ struct IndexEntry: Codable, Sendable {
             name: name,
             category: Category(rawValue: category) ?? .custom,
             createdAt: createdAt,
+            lastUsedAt: lastUsedAt,
             customFieldNames: customFieldNames,
             linksToMapsLocation: linksToMapsLocation ?? false,
             rerankPromptThreshold: rerankPromptThreshold,

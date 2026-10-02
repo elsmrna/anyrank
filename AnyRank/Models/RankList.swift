@@ -18,6 +18,10 @@ final class RankList: Identifiable {
     var categoryRaw: String
     var createdAt: Date
 
+    /// When the list was last opened or changed. Drives the home screen's
+    /// default "Recent" sort. Starts at `createdAt`.
+    var lastUsedAt: Date
+
     /// User-defined metadata field names for Custom-category lists.
     /// Empty for predefined categories. Values are stored on each
     /// `RankItem.customFieldValues` keyed by these names.
@@ -63,6 +67,7 @@ final class RankList: Identifiable {
         name: String,
         category: Category,
         createdAt: Date = Date(),
+        lastUsedAt: Date? = nil,
         customFieldNames: [String] = [],
         linksToMapsLocation: Bool = false,
         rerankPromptThreshold: Int = 10,
@@ -74,6 +79,7 @@ final class RankList: Identifiable {
         self.name = name
         self.categoryRaw = category.rawValue
         self.createdAt = createdAt
+        self.lastUsedAt = lastUsedAt ?? createdAt
         self.customFieldNames = customFieldNames
         self.linksToMapsLocation = linksToMapsLocation
         self.additionsSinceLastRerankPrompt = additionsSinceLastRerankPrompt

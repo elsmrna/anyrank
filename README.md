@@ -156,8 +156,8 @@ The README screenshots are generated, not hand-captured. To refresh them, run:
 scripts/screenshots.sh
 ```
 
-The script builds a Debug build for the iPhone 17 Pro Simulator and installs it fresh with the demo data (`-seedDemoData`). It then opens each screen through the Debug-only `-screenshotRoute` launch argument and captures it in light and dark mode with a clean 9:41 status bar. The PNGs land in `docs/screenshots/`. A full run takes about a minute.
+The script builds a Debug build and installs it fresh with the demo data (`-seedDemoData`) on a dedicated "AnyRank Screenshots (iPhone 17 Pro)" Simulator. It creates that Simulator on first run, so your everyday Simulator's data is never touched. It then opens each screen through the Debug-only `-screenshotRoute` launch argument and captures it in light and dark mode with a clean 9:41 status bar. The PNGs land in `docs/screenshots/`. A full run takes about a minute.
 
 - **One screen only:** pass route names, e.g. `scripts/screenshots.sh compare`.
-- **Different simulator or image size:** set `DEVICE=...` or `WIDTH=...`.
+- **Different device type or image size:** set `DEVICE=...` (e.g. `DEVICE="iPhone 17"`) or `WIDTH=...`.
 - **Add a screen:** add a case to `ScreenshotRoute` in `AnyRank/Preview/ScreenshotRoute.swift`, add it to `ROUTES` in the script, and add a cell to the table at the top of this README.
