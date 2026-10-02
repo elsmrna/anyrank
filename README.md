@@ -19,6 +19,46 @@ anyrank/
 └── README.md               This file
 ```
 
+## Installing the dev build on your iPhone
+
+AnyRank isn't on the App Store or TestFlight yet. To use it, build it from source and install it on your phone over a cable. You need a Mac with Xcode 16 or newer, an iPhone running iOS 18 or later, and an Apple ID. A free Apple ID works.
+
+**1. Download the code.** Either clone the repo:
+
+```bash
+git clone https://github.com/elsmrna/anyrank.git
+```
+
+or download the source zip for a tagged version from the [Releases](https://github.com/elsmrna/anyrank/releases) page and unzip it.
+
+**2. Generate the Xcode project.** From the repo folder:
+
+```bash
+brew install xcodegen
+```
+
+```bash
+cp Secrets.xcconfig.example Secrets.xcconfig
+```
+
+```bash
+xcodegen generate && open AnyRank.xcodeproj
+```
+
+You can leave every value in `Secrets.xcconfig` empty. Search and imports will use built-in sample data until you add keys (see [Configuring secrets](#configuring-secrets)).
+
+**3. Make the bundle ID yours** (skip this if you're the repo owner). Bundle IDs are tied to one Apple account. In `Project.yml`, change `bundleIdPrefix` and `PRODUCT_BUNDLE_IDENTIFIER` to something unique, such as `com.yourname.anyrank`, then run `xcodegen generate` again.
+
+**4. Sign it.** In Xcode, select the **AnyRank** target, open **Signing & Capabilities**, tick **Automatically manage signing**, and set **Team** to your Apple ID. If your Apple ID isn't listed, add it under **Xcode → Settings → Accounts**. Each `xcodegen generate` clears this setting, so pick the team again after you regenerate.
+
+**5. Prepare the phone** (first time only). Plug it in, unlock it, and tap **Trust This Computer**. Then turn on **Settings → Privacy & Security → Developer Mode** and let the phone restart.
+
+**6. Install.** Choose your iPhone from the device menu at the top of Xcode and press **Cmd-R**. The first time, iOS blocks the app until you go to **Settings → General → VPN & Device Management**, tap your Apple ID, and choose **Trust**. After that, open AnyRank from the home screen.
+
+**Updating to a newer version.** Run `git pull` (or download the newer zip), then `xcodegen generate`, pick your team again, and press **Cmd-R**. The new build installs over the old one and your lists are kept. **Settings → Version** in the app shows which version you're running.
+
+**With a free Apple ID, the app stops opening after 7 days.** Plug the phone back in and press **Cmd-R** to sign it again. Your data is not lost. A paid Apple Developer account extends this to a year. For wireless installs, the free-tier limits, and fixes for signing errors, see [LocalDev.md § 8](LocalDev.md#8-shipping-to-a-physical-device).
+
 ## First-time setup
 
 The Swift sources are committed without an `.xcodeproj`. There are two ways to get the project open in Xcode.
