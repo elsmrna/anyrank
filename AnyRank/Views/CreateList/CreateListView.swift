@@ -8,8 +8,10 @@ struct CreateListView: View {
 
     @State private var name: String = ""
     @State private var category: Category
-    @State private var customFieldNames: [String] = []
-    @State private var newFieldDraft: String = ""
+    /// Custom field rows as typed. Every row counts, so there's no Add
+    /// step; the last row is always blank and ready for the next field.
+    @State private var fieldDrafts: [FieldDraft] = [FieldDraft()]
+    @FocusState private var focusedFieldID: UUID?
     /// Custom-only toggle: when on, the add-item flow uses the Google
     /// Places picker (same UX as Restaurants/Bars) and items carry the
     /// canonical Maps metadata. Off keeps Custom lists text-only.
@@ -61,29 +63,28 @@ struct CreateListView: View {
                     }
 
                     Section {
-                        ForEach(customFieldNames, id: \.self) { field in
-                            HStack {
-                                Text(field)
-                                Spacer()
-                                Button {
-                                    withAnimation(Theme.spring) {
-                                        customFieldNames.removeAll { $0 == field }
+                        ForEach($fieldDrafts) { $draft in
+                            let isTrailingBlank = draft.id == fieldDrafts.last?.id
+                            TextField(
+                                isTrailingBlank ? (fieldDrafts.count == 1 ? "Add a field, e.g. Region" : "Add another field") : "Field name",
+                                text: $draft.name
+                            )
+                            .textInputAutocapitalization(.words)
+                            // Field names are often short labels (ABV, SKU)
+                            // that autocorrect would rewrite.
+                            .autocorrectionDisabled()
+                            .focused($focusedFieldID, equals: draft.id)
+                            .submitLabel(.next)
+                            .onSubmit { focusRow(after: draft.id) }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                if !isTrailingBlank {
+                                    Button(role: .destructive) {
+                                        removeField(draft.id)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
                                     }
-                                } label: {
-                                    Image(systemName: "minus.circle.fill")
-                                        .foregroundStyle(Theme.textTertiary)
                                 }
-                                .buttonStyle(.borderless)
-                                .accessibilityLabel("Remove \(field)")
                             }
-                        }
-                        HStack {
-                            TextField("Add a field, e.g. Region", text: $newFieldDraft)
-                                .submitLabel(.next)
-                                .onSubmit(addField)
-                            Button("Add", action: addField)
-                                .fontWeight(.semibold)
-                                .disabled(newFieldDraft.trimmingCharacters(in: .whitespaces).isEmpty)
                         }
                     } header: {
                         header("Custom fields")
@@ -113,6 +114,8 @@ struct CreateListView: View {
                 .background(Theme.background)
         }
         .onAppear { nameFocused = true }
+        .onChange(of: fieldDrafts) { keepTrailingBlankRow() }
+        .onChange(of: focusedFieldID) { dropClearedRows() }
         .presentationBackground(Theme.background)
     }
 
@@ -120,11 +123,34 @@ struct CreateListView: View {
         Text(text).foregroundStyle(Theme.textSecondary)
     }
 
-    private func addField() {
-        let trimmed = newFieldDraft.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty, !customFieldNames.contains(trimmed) else { return }
-        withAnimation(Theme.spring) { customFieldNames.append(trimmed) }
-        newFieldDraft = ""
+    /// Typing into the blank last row makes it a field, so add a fresh
+    /// blank row after it.
+    private func keepTrailingBlankRow() {
+        if let last = fieldDrafts.last, !last.isBlank {
+            withAnimation(Theme.spring) { fieldDrafts.append(FieldDraft()) }
+        }
+    }
+
+    /// A field cleared and left behind is gone, rather than lingering as a
+    /// blank row mid-list.
+    private func dropClearedRows() {
+        let lastID = fieldDrafts.last?.id
+        let cleared = fieldDrafts.filter { $0.isBlank && $0.id != lastID && $0.id != focusedFieldID }
+        guard !cleared.isEmpty else { return }
+        withAnimation(Theme.spring) {
+            fieldDrafts.removeAll { draft in cleared.contains { $0.id == draft.id } }
+        }
+    }
+
+    private func focusRow(after id: UUID) {
+        guard let index = fieldDrafts.firstIndex(where: { $0.id == id }),
+              fieldDrafts.indices.contains(index + 1)
+        else { return }
+        focusedFieldID = fieldDrafts[index + 1].id
+    }
+
+    private func removeField(_ id: UUID) {
+        withAnimation(Theme.spring) { fieldDrafts.removeAll { $0.id == id } }
     }
 
     private func save() {
@@ -132,11 +158,29 @@ struct CreateListView: View {
         let list = RankList(
             name: name.trimmingCharacters(in: .whitespaces),
             category: category,
-            customFieldNames: category == .custom ? customFieldNames : [],
+            customFieldNames: category == .custom ? FieldDraft.fieldNames(from: fieldDrafts) : [],
             linksToMapsLocation: category == .custom ? linksToMapsLocation : false
         )
         repository.addList(list)
         dismiss()
+    }
+}
+
+/// One custom field row in the create-list form.
+struct FieldDraft: Identifiable, Equatable {
+    let id = UUID()
+    var name = ""
+
+    var isBlank: Bool { name.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    /// The field names a list is created with: trimmed, blanks dropped, and
+    /// duplicates (ignoring case) collapsed to their first spelling, in
+    /// order.
+    static func fieldNames(from drafts: [FieldDraft]) -> [String] {
+        var seen = Set<String>()
+        return drafts
+            .map { $0.name.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
     }
 }
 
