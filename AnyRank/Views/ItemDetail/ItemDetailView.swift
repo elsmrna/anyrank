@@ -277,12 +277,7 @@ struct ItemDetailView: View {
             }
             if !list.customFieldNames.isEmpty {
                 Section {
-                    ForEach(list.customFieldNames, id: \.self) { field in
-                        LabeledContent(field) {
-                            TextField(field, text: customFieldBinding(field))
-                                .multilineTextAlignment(.trailing)
-                        }
-                    }
+                    CustomFieldRows(names: list.customFieldNames, value: customFieldBinding)
                 } header: {
                     header(list.linksToMapsLocation ? "Details" : "Fields")
                 }

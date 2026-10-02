@@ -42,11 +42,11 @@ struct CustomItemFormScreen: View {
                 }
                 if !list.customFieldNames.isEmpty {
                     Section {
-                        ForEach(list.customFieldNames, id: \.self) { field in
-                            TextField(field, text: Binding(
+                        CustomFieldRows(names: list.customFieldNames) { field in
+                            Binding(
                                 get: { fieldValues[field] ?? "" },
                                 set: { fieldValues[field] = $0 }
-                            ))
+                            )
                         }
                     } header: {
                         header("Details")
