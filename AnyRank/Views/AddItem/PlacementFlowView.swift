@@ -17,7 +17,7 @@ struct PlacementFlowView<Root: View>: View {
     /// Runs after a commit instead of dismissing — lets a caller chain into
     /// the next item (import sprees).
     var afterCommit: (() -> Void)? = nil
-    var resultHold: Duration = .milliseconds(1400)
+    var resultHold: Duration = AddItemResultScreen.defaultHold
     @ViewBuilder let root: () -> Root
 
     @Environment(\.dismiss) private var dismiss

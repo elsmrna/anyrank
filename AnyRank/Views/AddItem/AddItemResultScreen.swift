@@ -18,12 +18,14 @@ struct AddItemResultScreen: View {
     let placement: RankingSession.Placement
     let onDone: () -> Void
     /// How long the screen holds before continuing on its own.
-    var holdDuration: Duration = Self.dismissDelay
+    var holdDuration: Duration = Self.defaultHold
 
     /// How long the screen stays visible after the checkmark animates
     /// in. Long enough to register as a "done" moment, short enough
-    /// not to feel like waiting.
-    private static let dismissDelay: Duration = .milliseconds(1400)
+    /// not to feel like waiting. There's deliberately no "tap to
+    /// continue" prompt: it reads as an instruction, when the screen
+    /// moves on by itself.
+    static let defaultHold: Duration = .milliseconds(1100)
 
     /// Drives the checkmark scale/opacity animation. Starts false so we
     /// can animate to true on appear.
@@ -68,16 +70,11 @@ struct AddItemResultScreen: View {
             .offset(y: showCheckmark ? 0 : 10)
 
             Spacer()
-
-            Text("Tap to continue")
-                .font(.footnote)
-                .foregroundStyle(Theme.textTertiary)
-                .padding(.bottom, 16)
         }
         .padding(.horizontal, Theme.gutter)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-        // Tap anywhere to bypass the wait.
+        // Tapping anywhere skips the wait, for anyone who tries.
         .onTapGesture { onDone() }
         .sensoryFeedback(.success, trigger: showCheckmark)
         .onAppear {
