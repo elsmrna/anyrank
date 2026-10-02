@@ -26,9 +26,8 @@ struct AnyRankApp: App {
     /// configured, mock otherwise.
     private let gameService: any GameSearchService
 
-    /// Concrete Music service — Spotify (client-credentials) when
-    /// configured, mock otherwise. One service backs both Albums and
-    /// Songs categories.
+    /// Concrete album service: Spotify (client credentials) when
+    /// configured, mock otherwise.
     private let musicService: any MusicSearchService
 
     /// Steam library reader for imports — live Web API when a key is

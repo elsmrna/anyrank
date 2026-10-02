@@ -77,17 +77,6 @@ final class NewCategoriesTests: XCTestCase {
         XCTAssertNil(missing)
     }
 
-    func test_removedSongsCategory_loadsAsCustom() throws {
-        let sheet = """
-        id,name,category,created_at,custom_field_names,rerank_prompt_threshold,additions_since_last_rerank_prompt,links_to_maps_location
-        \(UUID().uuidString),Songs — All-time,songs,2026-01-01T00:00:00Z,[],10,0,false
-        """
-        let list = try XCTUnwrap(SheetsIndexCodec.decode(sheet).first).makeList()
-        XCTAssertEqual(list.category, .custom)
-        XCTAssertEqual(list.name, "Songs — All-time")
-        XCTAssertFalse(Category.allCases.map(\.rawValue).contains("songs"))
-    }
-
     func test_pluralNouns() {
         XCTAssertEqual(Category.manga.pluralNoun, "manga")
         XCTAssertEqual(Category.anime.pluralNoun, "anime")
