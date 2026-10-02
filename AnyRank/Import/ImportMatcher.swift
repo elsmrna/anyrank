@@ -127,6 +127,7 @@ enum ImportMatcher {
                 year = book.publicationYear
             }
             if let anime = staged.anime { year = anime.seasonYear }
+            if let manga = staged.manga { year = manga.startYear }
             if let game = staged.game { year = game.firstReleaseYear }
             if let album = staged.album {
                 if let url = album.spotifyURL { strongKeys.insert("spotify:\(url.absoluteString)") }

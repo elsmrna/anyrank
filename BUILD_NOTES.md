@@ -65,12 +65,12 @@ Restaurants, Bars, and Maps-linked Custom lists (`RankList.isPlaceList`) get a r
 ## What's stubbed
 
 Every category-specific search service is live:
-- Restaurants / Bars → Google Places SDK (see closed `live-google-places.md`)
-- Movies → TMDB v3 REST + `/external_ids` for IMDB (see closed `live-tmdb.md`)
-- Books → Open Library `/search.json` + optimistic StoryGraph slug (see closed `live-storygraph.md`)
-- Anime → AniList GraphQL (see closed `category-anime.md`)
-- Video Games → IGDB via Twitch client credentials (see closed `category-video-games.md`)
-- Music (Albums + Songs) → Spotify Web API via client credentials (see closed `music-albums-and-songs.md`)
+- Restaurants / Bars / Stays → Google Places SDK, with Stays filtered to the `lodging` type ([#10](https://github.com/elsmrna/anyrank/issues/10), [#31](https://github.com/elsmrna/anyrank/issues/31))
+- Movies → TMDB v3 REST + `/external_ids` for IMDB ([#12](https://github.com/elsmrna/anyrank/issues/12))
+- Books → Open Library `/search.json` + optimistic StoryGraph slug ([#11](https://github.com/elsmrna/anyrank/issues/11))
+- Anime / Manga → AniList GraphQL; `LiveAniListSearchService` serves both, varying only the media type ([#2](https://github.com/elsmrna/anyrank/issues/2), [#32](https://github.com/elsmrna/anyrank/issues/32))
+- Video Games → IGDB via Twitch client credentials ([#3](https://github.com/elsmrna/anyrank/issues/3))
+- Music (Albums + Songs) → Spotify Web API via client credentials ([#13](https://github.com/elsmrna/anyrank/issues/13))
 
 The IGDB and Spotify services share `AppOAuthTokenStore` — a small actor that caches app-level OAuth 2.0 client-credentials tokens and refreshes on demand. Both are gated by their respective `<Provider>_CLIENT_ID` / `<Provider>_CLIENT_SECRET` in `Secrets.xcconfig`; either missing → the mock service is injected instead, so the app stays runnable without secrets.
 

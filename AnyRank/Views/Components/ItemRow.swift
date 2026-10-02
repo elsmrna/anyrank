@@ -51,7 +51,7 @@ struct ItemRow: View {
 
     private var secondaryText: String? {
         switch item.list?.category {
-        case .restaurants, .bars: return item.address
+        case .restaurants, .bars, .stays: return item.address
         case .movies: return item.releaseYear.map { String($0) }
         case .books:
             // Author is the most useful disambiguator; year is appended
@@ -66,6 +66,11 @@ struct ItemRow: View {
             var parts: [String] = []
             if let fmt = item.animeFormat, !fmt.isEmpty { parts.append(fmt.capitalized) }
             if let year = item.releaseYear { parts.append(String(year)) }
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        case .manga:
+            // Format matters more than for anime: manga vs. manhwa vs. a
+            // light novel of the same series.
+            let parts = [item.animeFormat, item.releaseYear.map { String($0) }].compactMap { $0 }.filter { !$0.isEmpty }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         case .games:
             // Year is the most useful disambiguator across remasters.

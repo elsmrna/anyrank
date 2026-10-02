@@ -109,10 +109,10 @@ enum RankingApplier {
         switch list.category {
         case .movies: return item.posterURLString
         case .books:  return item.coverURLString
-        case .anime:  return item.coverURLString
+        case .anime, .manga: return item.coverURLString
         case .games:  return item.coverURLString
         case .albums, .songs: return item.coverURLString
-        case .restaurants, .bars, .custom: return nil
+        case .restaurants, .bars, .stays, .custom: return nil
         }
     }
 
@@ -132,6 +132,10 @@ enum RankingApplier {
             var parts: [String] = []
             if let year = item.releaseYear { parts.append(String(year)) }
             if let eps = item.episodeCount, eps > 1 { parts.append("\(eps) eps") }
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        case .manga:
+            let parts = [item.releaseYear.map { String($0) }, MangaLength.text(chapters: item.chapterCount, volumes: item.volumeCount)]
+                .compactMap { $0 }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         case .games:
             var parts: [String] = []
@@ -159,7 +163,7 @@ enum RankingApplier {
                 return artist
             }
             return nil
-        case .restaurants, .bars:
+        case .restaurants, .bars, .stays:
             let addr = item.address ?? ""
             return addr.isEmpty ? nil : addr
         case .custom:

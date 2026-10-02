@@ -160,6 +160,7 @@ private extension PlacesSearchKind {
         switch self {
         case .restaurant: return "restaurant"
         case .bar:        return "bar"
+        case .lodging:    return "lodging"
         case .any:        return nil
         }
     }

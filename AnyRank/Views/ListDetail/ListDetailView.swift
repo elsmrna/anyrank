@@ -336,13 +336,7 @@ struct ListDetailView: View {
         .padding(.vertical, 4)
     }
 
-    private var pluralNoun: String {
-        switch list.category {
-        case .anime:  return "anime"
-        case .custom: return "items"
-        default:      return list.category.itemNoun + "s"
-        }
-    }
+    private var pluralNoun: String { list.category.pluralNoun }
 
     private func revealNewItem(_ id: UUID, proxy: ScrollViewProxy) {
         Task { @MainActor in

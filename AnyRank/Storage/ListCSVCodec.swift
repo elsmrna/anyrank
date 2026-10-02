@@ -35,6 +35,7 @@ enum ListCSVCodec {
         "tmdb_id", "release_year", "poster_url", "imdb_url",
         "author", "isbn", "storygraph_url", "cover_url",
         "anime_format", "episode_count", "anilist_url",
+        "chapter_count", "volume_count",
         "platforms", "igdb_url",
         "artist", "album_title", "duration_seconds", "spotify_url",
         "custom_link",
@@ -76,6 +77,8 @@ enum ListCSVCodec {
             item.animeFormat ?? "",
             item.episodeCount.map { String($0) } ?? "",
             item.aniListURLString ?? "",
+            item.chapterCount.map { String($0) } ?? "",
+            item.volumeCount.map { String($0) } ?? "",
             (item.platforms ?? []).joined(separator: "|"),
             item.igdbURLString ?? "",
             item.artist ?? "",
@@ -155,6 +158,8 @@ enum ListCSVCodec {
         item.animeFormat = field(row, columnIndex, "anime_format")
         item.episodeCount = field(row, columnIndex, "episode_count").flatMap(Int.init)
         item.aniListURLString = field(row, columnIndex, "anilist_url")
+        item.chapterCount = field(row, columnIndex, "chapter_count").flatMap(Int.init)
+        item.volumeCount = field(row, columnIndex, "volume_count").flatMap(Int.init)
 
         if let platformsRaw = field(row, columnIndex, "platforms"), !platformsRaw.isEmpty {
             item.platforms = platformsRaw.split(separator: "|").map(String.init)

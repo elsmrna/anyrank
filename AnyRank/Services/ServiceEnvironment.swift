@@ -20,6 +20,10 @@ private struct AnimeServiceKey: EnvironmentKey {
     static let defaultValue: any AnimeSearchService = MockAnimeSearchService()
 }
 
+private struct MangaServiceKey: EnvironmentKey {
+    static let defaultValue: any MangaSearchService = MockMangaSearchService()
+}
+
 private struct GameServiceKey: EnvironmentKey {
     static let defaultValue: any GameSearchService = MockGameSearchService()
 }
@@ -44,6 +48,10 @@ extension EnvironmentValues {
     var animeService: any AnimeSearchService {
         get { self[AnimeServiceKey.self] }
         set { self[AnimeServiceKey.self] = newValue }
+    }
+    var mangaService: any MangaSearchService {
+        get { self[MangaServiceKey.self] }
+        set { self[MangaServiceKey.self] = newValue }
     }
     var gameService: any GameSearchService {
         get { self[GameServiceKey.self] }

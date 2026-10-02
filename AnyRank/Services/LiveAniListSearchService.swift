@@ -1,6 +1,7 @@
 import Foundation
 
-/// AniList-backed implementation of `AnimeSearchService`.
+/// AniList-backed implementation of `AnimeSearchService` and
+/// `MangaSearchService`; one GraphQL query serves both media types.
 ///
 /// AniList's GraphQL API doesn't require authentication for search
 /// queries, so this service has no `Secrets.xcconfig` entry and can be
@@ -10,7 +11,7 @@ import Foundation
 ///
 /// One fixed GraphQL query per search — hand-written string, no
 /// GraphQL client library. The response is `Codable`-decoded.
-struct LiveAniListSearchService: AnimeSearchService {
+struct LiveAniListSearchService: AnimeSearchService, MangaSearchService {
 
     private static let endpoint = URL(string: "https://graphql.anilist.co")!
 
@@ -19,14 +20,18 @@ struct LiveAniListSearchService: AnimeSearchService {
     private static let resultLimit = 15
 
     private static let query = """
-    query ($search: String) {
+    query ($search: String, $type: MediaType) {
       Page(perPage: \(resultLimit)) {
-        media(search: $search, type: ANIME, sort: [SEARCH_MATCH, POPULARITY_DESC]) {
+        media(search: $search, type: $type, sort: [SEARCH_MATCH, POPULARITY_DESC]) {
           id
           title { english romaji native }
           format
+          countryOfOrigin
           seasonYear
+          startDate { year }
           episodes
+          chapters
+          volumes
           coverImage { large }
           siteUrl
         }
@@ -41,24 +46,7 @@ struct LiveAniListSearchService: AnimeSearchService {
     }
 
     func search(query: String) async throws -> [AnimeSearchResult] {
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return [] }
-
-        var request = URLRequest(url: Self.endpoint)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-
-        let body = GraphQLRequest(query: Self.query, variables: .init(search: trimmed))
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, response) = try await session.data(for: request)
-        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            throw LiveServiceError.notImplemented("AniList HTTP \(http.statusCode)")
-        }
-
-        let decoded = try JSONDecoder().decode(GraphQLResponse.self, from: data)
-        return decoded.data.Page.media.map { m in
+        try await media(matching: query, type: "ANIME").map { m in
             let (display, alternates) = Self.pickTitles(from: m.title)
             return AnimeSearchResult(
                 id: m.id,
@@ -71,6 +59,42 @@ struct LiveAniListSearchService: AnimeSearchService {
                 aniListURL: m.siteUrl.flatMap { URL(string: $0) }
             )
         }
+    }
+
+    func searchManga(query: String) async throws -> [MangaSearchResult] {
+        try await media(matching: query, type: "MANGA").map { m in
+            let (display, alternates) = Self.pickTitles(from: m.title)
+            return MangaSearchResult(
+                id: m.id,
+                title: display,
+                alternateTitles: alternates,
+                format: MangaFormat.display(m.format, countryOfOrigin: m.countryOfOrigin),
+                startYear: m.startDate?.year,
+                chapterCount: m.chapters,
+                volumeCount: m.volumes,
+                coverURL: m.coverImage?.large.flatMap { URL(string: $0) },
+                aniListURL: m.siteUrl.flatMap { URL(string: $0) }
+            )
+        }
+    }
+
+    private func media(matching query: String, type: String) async throws -> [GraphQLResponse.Media] {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return [] }
+
+        var request = URLRequest(url: Self.endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let body = GraphQLRequest(query: Self.query, variables: .init(search: trimmed, type: type))
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+            throw LiveServiceError.notImplemented("AniList HTTP \(http.statusCode)")
+        }
+        return try JSONDecoder().decode(GraphQLResponse.self, from: data).data.Page.media
     }
 
     /// English preferred, romaji fallback, native as a last resort. The
@@ -97,6 +121,7 @@ private struct GraphQLRequest: Encodable {
     let variables: Variables
     struct Variables: Encodable {
         let search: String
+        let type: String
     }
 }
 
@@ -112,13 +137,20 @@ private struct GraphQLResponse: Decodable {
         let id: Int
         let title: Title
         let format: String?
+        let countryOfOrigin: String?
         let seasonYear: Int?
+        let startDate: FuzzyDate?
         let episodes: Int?
+        let chapters: Int?
+        let volumes: Int?
         let coverImage: CoverImage?
         let siteUrl: String?
     }
     struct CoverImage: Decodable {
         let large: String?
+    }
+    struct FuzzyDate: Decodable {
+        let year: Int?
     }
 }
 

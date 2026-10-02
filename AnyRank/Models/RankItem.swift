@@ -57,6 +57,12 @@ final class RankItem: Identifiable {
     var episodeCount: Int?
     var aniListURLString: String?
 
+    // MARK: Manga metadata
+    // Manga reuses `animeFormat` (display format, e.g. "Manga", "Manhwa"),
+    // `releaseYear`, `coverURLString`, and `aniListURLString`.
+    var chapterCount: Int?
+    var volumeCount: Int?
+
     // MARK: Games metadata
     /// Platform abbreviations from IGDB — "PS5", "PC", "SW", etc. Kept
     /// as a plain array; CSV encodes it as a "|"-joined string. Order
@@ -94,10 +100,10 @@ final class RankItem: Identifiable {
     var primaryURL: URL? {
         let urlString: String?
         switch list?.category {
-        case .restaurants, .bars: urlString = mapsURLString
+        case .restaurants, .bars, .stays: urlString = mapsURLString
         case .movies: urlString = imdbURLString
         case .books: urlString = storyGraphURLString
-        case .anime: urlString = aniListURLString
+        case .anime, .manga: urlString = aniListURLString
         case .games: urlString = igdbURLString
         case .albums, .songs: urlString = spotifyURLString
         case .custom, .none:

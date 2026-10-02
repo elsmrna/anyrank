@@ -1,11 +1,11 @@
 import Foundation
 
 extension RankList {
-    /// Lists whose items are places: Restaurants, Bars, and Custom lists
+    /// Lists whose items are places: Restaurants, Bars, Stays, and Custom lists
     /// that look items up on Google Maps.
     var isPlaceList: Bool {
         switch category {
-        case .restaurants, .bars: return true
+        case .restaurants, .bars, .stays: return true
         case .custom: return linksToMapsLocation
         default: return false
         }
@@ -15,6 +15,7 @@ extension RankList {
         switch category {
         case .restaurants: return .restaurant
         case .bars: return .bar
+        case .stays: return .lodging
         default: return .any
         }
     }

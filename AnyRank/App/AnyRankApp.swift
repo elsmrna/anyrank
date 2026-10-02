@@ -132,6 +132,7 @@ struct AnyRankApp: App {
                 .environment(\.bookService, LiveBookSearchService())
                 // AniList is also keyless — same reasoning.
                 .environment(\.animeService, LiveAniListSearchService())
+                .environment(\.mangaService, LiveAniListSearchService())
                 .environment(\.gameService, gameService)
                 .environment(\.musicService, musicService)
                 .environment(\.steamLibraryService, steamService)

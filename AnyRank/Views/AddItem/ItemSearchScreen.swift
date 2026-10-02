@@ -22,12 +22,20 @@ struct ItemSearchScreen: View {
                 stagedCategory: .bars,
                 onIdentified: onIdentified
             )
+        case .stays:
+            PlaceSearchScreen(
+                kind: .lodging,
+                stagedCategory: .stays,
+                onIdentified: onIdentified
+            )
         case .movies:
             MovieSearchScreen(onIdentified: onIdentified)
         case .books:
             BookSearchScreen(onIdentified: onIdentified)
         case .anime:
             AnimeSearchScreen(onIdentified: onIdentified)
+        case .manga:
+            MangaSearchScreen(onIdentified: onIdentified)
         case .games:
             GameSearchScreen(onIdentified: onIdentified)
         case .albums:

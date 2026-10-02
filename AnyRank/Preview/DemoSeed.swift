@@ -14,6 +14,8 @@ enum DemoSeed {
         guard repository.lists.isEmpty else { return }
         let sources = [
             PreviewSupport.customMapsLinkedRepository(),
+            PreviewSupport.staysRepository(),
+            PreviewSupport.mangaRepository(),
             PreviewSupport.songsRepository(),
             PreviewSupport.gamesRepository(),
             PreviewSupport.animeRepository(),
@@ -43,6 +45,8 @@ enum DemoSeed {
         "Restaurants — LA": 1,
         "Weekend Spots": 3,
         "Books — 2024": 20,
+        "Manga": 26,
+        "Stays — LA": 60,
         "Movies": 30,
         "Games — All-time": 50,
         "Songs — All-time": 80,

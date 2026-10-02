@@ -13,7 +13,7 @@ struct StagedItem: Identifiable, Equatable, Codable {
     var name: String
     var category: Category
 
-    // Restaurants / Bars
+    // Restaurants / Bars / Stays
     var place: PlaceSearchResult?
 
     // Movies
@@ -24,6 +24,9 @@ struct StagedItem: Identifiable, Equatable, Codable {
 
     // Anime
     var anime: AnimeSearchResult?
+
+    // Manga
+    var manga: MangaSearchResult?
 
     // Games
     var game: GameSearchResult?
@@ -102,6 +105,14 @@ struct StagedItem: Identifiable, Equatable, Codable {
             item.coverURLString = anime.coverURL?.absoluteString
             item.aniListURLString = anime.aniListURL?.absoluteString
         }
+        if let manga {
+            item.animeFormat = manga.format
+            item.releaseYear = manga.startYear
+            item.chapterCount = manga.chapterCount
+            item.volumeCount = manga.volumeCount
+            item.coverURLString = manga.coverURL?.absoluteString
+            item.aniListURLString = manga.aniListURL?.absoluteString
+        }
         if let game {
             item.platforms = game.platforms
             item.releaseYear = game.firstReleaseYear
@@ -164,10 +175,11 @@ struct StagedItem: Identifiable, Equatable, Codable {
         case .movies: return movie?.posterURL?.absoluteString
         case .books:  return book?.coverURL?.absoluteString
         case .anime:  return anime?.coverURL?.absoluteString
+        case .manga:  return manga?.coverURL?.absoluteString
         case .games:  return game?.coverURL?.absoluteString
         case .albums: return album?.coverURL?.absoluteString
         case .songs:  return song?.coverURL?.absoluteString
-        case .restaurants, .bars, .custom: return nil
+        case .restaurants, .bars, .stays, .custom: return nil
         }
     }
 
@@ -191,6 +203,9 @@ struct StagedItem: Identifiable, Equatable, Codable {
                 anime.seasonYear.map(String.init),
                 (anime.episodeCount ?? 0) > 1 ? "\(anime.episodeCount!) eps" : nil,
             ])
+        case .manga:
+            guard let manga else { return year }
+            return joined([manga.format, manga.startYear.map(String.init), MangaLength.text(chapters: manga.chapterCount, volumes: manga.volumeCount)])
         case .games:
             guard let game else { return year }
             let platforms = GameSearchScreen.compactPlatforms(game.platforms)
@@ -201,7 +216,7 @@ struct StagedItem: Identifiable, Equatable, Codable {
         case .songs:
             guard let song else { return fallbackCreator }
             return joined([song.artist, song.albumTitle])
-        case .restaurants, .bars, .custom:
+        case .restaurants, .bars, .stays, .custom:
             return place?.address
         }
     }

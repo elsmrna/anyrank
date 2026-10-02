@@ -184,10 +184,10 @@ struct ItemDetailView: View {
     private func linkLabel(for url: URL) -> String {
         if let brand = ServiceBrand(url: url) { return brand.displayName }
         switch list.category {
-        case .restaurants, .bars: return "Maps"
+        case .restaurants, .bars, .stays: return "Maps"
         case .movies:             return "IMDb"
         case .books:              return "StoryGraph"
-        case .anime:              return "AniList"
+        case .anime, .manga:      return "AniList"
         case .games:              return "IGDB"
         case .albums, .songs:     return "Spotify"
         case .custom:             return item.mapsURLString != nil ? "Maps" : "browser"
@@ -197,8 +197,9 @@ struct ItemDetailView: View {
     private var visitedHeader: String {
         switch list.category {
         case .restaurants, .bars: return "Visited"
+        case .stays:              return "Stayed"
         case .movies, .anime:     return "Watched"
-        case .books:              return "Read"
+        case .books, .manga:      return "Read"
         case .games:              return "Played"
         case .albums, .songs:     return "Listened"
         case .custom:             return "Date"
@@ -215,10 +216,10 @@ struct ItemDetailView: View {
     private var heroSubtitle: String? {
         let value: String?
         switch list.category {
-        case .restaurants, .bars, .custom: value = item.address
+        case .restaurants, .bars, .stays, .custom: value = item.address
         case .books:                       value = item.author
         case .albums, .songs:              value = item.artist
-        case .movies, .anime, .games:      value = nil
+        case .movies, .anime, .manga, .games: value = nil
         }
         return value.flatMap { $0.isEmpty ? nil : $0 }
     }
@@ -233,6 +234,8 @@ struct ItemDetailView: View {
             if let format = item.animeFormat, !format.isEmpty {
                 facts.append(format.count <= 3 ? format.uppercased() : format.capitalized)
             }
+        case .manga:
+            if let format = item.animeFormat, !format.isEmpty { facts.append(format) }
         default:
             break
         }
@@ -240,6 +243,10 @@ struct ItemDetailView: View {
         switch list.category {
         case .anime:
             if let eps = item.episodeCount, eps > 1 { facts.append("\(eps) episodes") }
+        case .manga:
+            if let length = MangaLength.text(chapters: item.chapterCount, volumes: item.volumeCount, long: true) {
+                facts.append(length)
+            }
         case .games:
             if let platforms = item.platforms, !platforms.isEmpty {
                 facts.append(platforms.joined(separator: ", "))

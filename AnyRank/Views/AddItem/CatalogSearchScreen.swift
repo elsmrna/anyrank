@@ -87,7 +87,7 @@ struct CatalogSearchScreen<Result: Identifiable>: View {
                     ArtworkView(urlString: content.imageURL?.absoluteString, category: category, width: 44, cornerRadius: 6)
                         .frame(width: 58, alignment: .leading)
                 } else {
-                    Image(systemName: category == .restaurants || category == .bars || category == .custom
+                    Image(systemName: [.restaurants, .bars, .stays, .custom].contains(category)
                           ? "mappin.and.ellipse" : category.systemIconName)
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(category.tint)

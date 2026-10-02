@@ -147,8 +147,8 @@ extension Category {
     var tint: Color {
         switch self {
         case .restaurants, .anime, .songs: return Theme.accent
-        case .bars, .games:                return Theme.olive
-        case .movies, .albums:             return Theme.espresso
+        case .bars, .games, .manga:        return Theme.olive
+        case .movies, .albums, .stays:     return Theme.espresso
         case .books, .custom:              return Theme.taupe
         }
     }
@@ -158,13 +158,24 @@ extension Category {
         switch self {
         case .restaurants: return "restaurant"
         case .bars:        return "bar"
+        case .stays:       return "stay"
         case .movies:      return "movie"
         case .books:       return "book"
         case .anime:       return "anime"
+        case .manga:       return "manga"
         case .games:       return "game"
         case .albums:      return "album"
         case .songs:       return "song"
         case .custom:      return "item"
+        }
+    }
+
+    /// Plural noun, e.g. "12 restaurants left to rank".
+    var pluralNoun: String {
+        switch self {
+        case .anime, .manga: return itemNoun
+        case .custom:        return "items"
+        default:             return itemNoun + "s"
         }
     }
 
@@ -173,9 +184,11 @@ extension Category {
         switch self {
         case .restaurants: return "e.g. Tokyo ramen"
         case .bars:        return "e.g. Cocktail bars — NYC"
+        case .stays:       return "e.g. Hotels in Japan"
         case .movies:      return "e.g. Films of 2025"
         case .books:       return "e.g. Sci-fi favorites"
         case .anime:       return "e.g. Seasonal anime"
+        case .manga:       return "e.g. Shōnen favorites"
         case .games:       return "e.g. Co-op games"
         case .albums:      return "e.g. Desert island albums"
         case .songs:       return "e.g. Running playlist"
@@ -186,16 +199,16 @@ extension Category {
     /// Whether this category has cover art worth showing (posters, covers).
     var hasArtwork: Bool {
         switch self {
-        case .movies, .books, .anime, .games, .albums, .songs: return true
-        case .restaurants, .bars, .custom: return false
+        case .movies, .books, .anime, .manga, .games, .albums, .songs: return true
+        case .restaurants, .bars, .stays, .custom: return false
         }
     }
 
     /// Aspect ratio (width / height) of the category's cover art.
     var artworkAspectRatio: CGFloat {
         switch self {
-        case .movies, .books, .anime, .games: return 2.0 / 3.0
-        case .albums, .songs, .restaurants, .bars, .custom: return 1
+        case .movies, .books, .anime, .manga, .games: return 2.0 / 3.0
+        case .albums, .songs, .restaurants, .bars, .stays, .custom: return 1
         }
     }
 }

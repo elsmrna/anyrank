@@ -5,9 +5,11 @@ import Foundation
 enum Category: String, Codable, CaseIterable, Identifiable {
     case restaurants
     case bars
+    case stays
     case movies
     case books
     case anime
+    case manga
     case games
     case albums
     case songs
@@ -19,9 +21,11 @@ enum Category: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .restaurants: return "Restaurants"
         case .bars: return "Bars"
+        case .stays: return "Stays"
         case .movies: return "Movies"
         case .books: return "Books"
         case .anime: return "Anime"
+        case .manga: return "Manga"
         case .games: return "Games"
         case .albums: return "Albums"
         case .songs: return "Songs"
@@ -33,7 +37,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
     /// Custom uses a free-text name + pasted link instead.
     var supportsExternalSearch: Bool {
         switch self {
-        case .restaurants, .bars, .movies, .books, .anime, .games, .albums, .songs: return true
+        case .restaurants, .bars, .stays, .movies, .books, .anime, .manga, .games, .albums, .songs: return true
         case .custom: return false
         }
     }
@@ -42,9 +46,11 @@ enum Category: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .restaurants: return "fork.knife"
         case .bars: return "wineglass"
+        case .stays: return "bed.double"
         case .movies: return "film"
         case .books: return "book.closed"
         case .anime: return "tv"
+        case .manga: return "book.pages"
         case .games: return "gamecontroller"
         case .albums: return "opticaldisc"
         case .songs: return "music.note"

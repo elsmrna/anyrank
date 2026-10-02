@@ -13,6 +13,7 @@ struct ImportEnricher {
     let movies: any MovieSearchService
     let books: any BookSearchService
     let anime: any AnimeSearchService
+    var manga: any MangaSearchService = MockMangaSearchService()
     let games: any GameSearchService
     let music: any MusicSearchService
 
@@ -62,6 +63,14 @@ struct ImportEnricher {
                         && yearsAgree(result.seasonYear, item.fallbackYear)
                 }) else { return nil }
                 updated.anime = hit
+
+            case .manga where item.manga == nil:
+                let results = try await manga.searchManga(query: item.name)
+                guard let hit = results.first(where: { result in
+                    ([result.title] + result.alternateTitles).contains { ImportMatcher.normalize($0) == name }
+                        && yearsAgree(result.startYear, item.fallbackYear)
+                }) else { return nil }
+                updated.manga = hit
 
             case .games where item.game == nil:
                 let results = try await games.search(query: item.name)

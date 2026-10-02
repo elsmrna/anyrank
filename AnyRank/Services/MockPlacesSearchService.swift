@@ -17,8 +17,9 @@ struct MockPlacesSearchService: PlacesSearchService {
         switch kind {
         case .restaurant: pool = Self.restaurantPool
         case .bar:        pool = Self.barPool
+        case .lodging:    pool = Self.lodgingPool
         // Custom lists with the Maps toggle on search across all kinds.
-        case .any:        pool = Self.restaurantPool + Self.barPool
+        case .any:        pool = Self.restaurantPool + Self.barPool + Self.lodgingPool
         }
 
         guard !query.isEmpty else { return pool }
@@ -31,6 +32,19 @@ struct MockPlacesSearchService: PlacesSearchService {
         // never empty in previews. The query is just an autocomplete hint.
         return filtered.isEmpty ? pool : filtered
     }
+
+    static let lodgingPool: [PlaceSearchResult] = [
+        .init(id: "mock-lodging-chateau", name: "Chateau Marmont", address: "8221 Sunset Blvd, Los Angeles, CA",
+              latitude: 34.0981, longitude: -118.3684, mapsURL: URL(string: "https://maps.google.com/?q=Chateau+Marmont")!),
+        .init(id: "mock-lodging-figueroa", name: "Hotel Figueroa", address: "939 S Figueroa St, Los Angeles, CA",
+              latitude: 34.0459, longitude: -118.2632, mapsURL: URL(string: "https://maps.google.com/?q=Hotel+Figueroa")!),
+        .init(id: "mock-lodging-ace", name: "Ace Hotel Downtown Los Angeles", address: "929 S Broadway, Los Angeles, CA",
+              latitude: 34.0412, longitude: -118.2566, mapsURL: URL(string: "https://maps.google.com/?q=Ace+Hotel+Downtown+Los+Angeles")!),
+        .init(id: "mock-lodging-line", name: "The LINE LA", address: "3515 Wilshire Blvd, Los Angeles, CA",
+              latitude: 34.0617, longitude: -118.3077, mapsURL: URL(string: "https://maps.google.com/?q=The+LINE+LA")!),
+        .init(id: "mock-lodging-shutters", name: "Shutters on the Beach", address: "1 Pico Blvd, Santa Monica, CA",
+              latitude: 34.0076, longitude: -118.4901, mapsURL: URL(string: "https://maps.google.com/?q=Shutters+on+the+Beach")!),
+    ]
 
     private static let restaurantPool: [PlaceSearchResult] = [
         .init(

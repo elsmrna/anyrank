@@ -181,6 +181,39 @@ enum PreviewSupport {
         }
     }
 
+    /// One manga list from the mock catalog, spanning two buckets.
+    static func mangaRepository() -> Repository {
+        makeRepository { repo in
+            let manga = RankList(name: "Manga", category: .manga)
+            let pool = Dictionary(uniqueKeysWithValues: MockMangaSearchService.pool.map { ($0.title, $0) })
+            seedStaged(in: manga, items: [
+                ("Vagabond", .loved), ("Monster", .loved), ("Berserk", .loved),
+                ("Goodnight Punpun", .liked), ("Solo Leveling", .fine),
+            ].compactMap { title, bucket in
+                pool[title].map { result in
+                    var staged = StagedItem(name: result.title, category: .manga)
+                    staged.manga = result
+                    return (staged, bucket)
+                }
+            })
+            repo.addList(manga)
+        }
+    }
+
+    /// One Stays list of LA hotels from the mock Places catalog.
+    static func staysRepository() -> Repository {
+        makeRepository { repo in
+            let stays = RankList(name: "Stays — LA", category: .stays)
+            let buckets: [Bucket] = [.loved, .loved, .liked, .liked, .fine]
+            seedStaged(in: stays, items: zip(MockPlacesSearchService.lodgingPool, buckets).map { place, bucket in
+                var staged = StagedItem(name: place.name, category: .stays)
+                staged.place = place
+                return (staged, bucket)
+            })
+            repo.addList(stays)
+        }
+    }
+
     /// One books list spanning two buckets — for previewing Books detail
     /// and snapshot tests that focus on the books path.
     static func booksRepository() -> Repository {
@@ -312,6 +345,24 @@ enum PreviewSupport {
                 item.platforms = payload.platforms
                 item.releaseYear = payload.year
                 item.igdbURLString = "https://www.igdb.com/games/mock-\(payload.name.hashValue.magnitude)"
+                item.list = list
+                list.items.append(item)
+            }
+        }
+    }
+
+    /// Items built from staged search results, the same way the add flow
+    /// builds them, scored by position within each bucket.
+    private static func seedStaged(in list: RankList, items: [(staged: StagedItem, bucket: Bucket)]) {
+        let grouped = Dictionary(grouping: items, by: \.bucket)
+        for (bucket, entries) in grouped {
+            for (rank, entry) in entries.enumerated() {
+                let item = RankItem(
+                    name: entry.staged.name,
+                    bucket: bucket,
+                    score: ScoreInterpolation.score(forRankIndex: rank, bucketCount: entries.count, bucket: bucket)
+                )
+                entry.staged.apply(to: item)
                 item.list = list
                 list.items.append(item)
             }

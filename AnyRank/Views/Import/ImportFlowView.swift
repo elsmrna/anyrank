@@ -778,13 +778,7 @@ private struct ImportPreviewScreen: View {
         .buttonStyle(.plain)
     }
 
-    private var pluralNoun: String {
-        switch draft.category {
-        case .anime:  return "anime"
-        case .custom: return "items"
-        default:      return draft.category.itemNoun + "s"
-        }
-    }
+    private var pluralNoun: String { draft.category.pluralNoun }
 
     private func commit(_ plan: ImportPlan, startNow: Bool) {
         let list: RankList

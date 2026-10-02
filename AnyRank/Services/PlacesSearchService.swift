@@ -22,6 +22,8 @@ protocol PlacesSearchService: Sendable {
 enum PlacesSearchKind: String, Sendable {
     case restaurant
     case bar
+    /// Hotels and other places to stay (the Places `lodging` type).
+    case lodging
     /// No type filter — used by custom lists that opt into Maps lookup
     /// via `RankList.linksToMapsLocation`. Returns whatever the Places
     /// SDK considers most relevant for the query.

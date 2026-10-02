@@ -16,6 +16,7 @@ struct RankingSpreeView: View {
     @Environment(\.movieService) private var movieService
     @Environment(\.bookService) private var bookService
     @Environment(\.animeService) private var animeService
+    @Environment(\.mangaService) private var mangaService
     @Environment(\.gameService) private var gameService
     @Environment(\.musicService) private var musicService
 
@@ -137,7 +138,7 @@ struct RankingSpreeView: View {
     /// covers are usually ready by the time an item comes up.
     private func enrichUpcoming() async {
         let enricher = ImportEnricher(
-            movies: movieService, books: bookService, anime: animeService,
+            movies: movieService, books: bookService, anime: animeService, manga: mangaService,
             games: gameService, music: musicService
         )
         let upcoming = (session?.pending.prefix(3) ?? []).filter { !lookedUp.contains($0.id) }
@@ -187,13 +188,7 @@ struct RankingSpreeView: View {
         return line
     }
 
-    private var pluralNoun: String {
-        switch list.category {
-        case .anime:  return "anime"
-        case .custom: return "items"
-        default:      return list.category.itemNoun + "s"
-        }
-    }
+    private var pluralNoun: String { list.category.pluralNoun }
 }
 
 /// Thin progress bar for the import queue.
