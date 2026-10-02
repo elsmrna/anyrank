@@ -11,7 +11,7 @@ import Foundation
 ///   2. Construct the StoryGraph URL from the result. Prefer a slug URL
 ///      built from the title (works ~80% of the time); fall back to
 ///      StoryGraph's browse-search URL when the slug would 404. See
-///      `issues/closed/live-storygraph.md` for the tradeoff rationale.
+///      https://github.com/elsmrna/anyrank/issues/11 for the tradeoff rationale.
 ///   3. Cover images come from `https://covers.openlibrary.org/b/id/…-L.jpg`.
 ///
 /// No API key is required. `AnyRankApp` can wire this directly with no

@@ -24,7 +24,7 @@ Google OAuth sign-in is wired up under `AnyRank/Auth/`. Architecture: `AuthDrive
 
 Sign-in is exposed in two places. `SignInOnboardingView` is a first-launch sheet (gated by the `hasCompletedOnboarding` `@AppStorage` flag) that offers "Sign in with Google" alongside a prominent "Continue without an account" bypass — local-only mode is fully preserved. `SettingsView` is reachable from a gear icon on `ListsHomeView` and shows the same affordance for users who skipped initially, plus a sign-out action.
 
-OAuth scopes at sign-in are `profile` and `email` only, deliberately. Sheets and Drive scopes are added later when the user enables sync in Settings (see `issues/closed/google-oauth-sheets-sync.md`), which re-prompts the consent screen — a known and intentional cost in exchange for a less-scary initial prompt.
+OAuth scopes at sign-in are `profile` and `email` only, deliberately. Sheets and Drive scopes are added later when the user enables sync in Settings (see [#5](https://github.com/elsmrna/anyrank/issues/5)), which re-prompts the consent screen — a known and intentional cost in exchange for a less-scary initial prompt.
 
 The build degrades cleanly when no OAuth client ID is configured. `Secrets.swift` reads from Info.plist (populated via `Secrets.xcconfig` → `Project.yml` `baseConfiguration`); if the value is missing, `AnyRankApp` constructs a `MockAuthDriver` and the rest of the app behaves normally. Sign-in attempts surface a clear "not configured" error instead of crashing.
 
@@ -56,7 +56,7 @@ Custom lists pick up the same flow via the new `RankList.linksToMapsLocation` fl
 
 ## Books integration (Open Library + StoryGraph URLs)
 
-`LiveBookSearchService` hits Open Library's `/search.json` (keyless, generous rate limits) and maps each hit into a `BookSearchResult`. First-author-first-ISBN heuristic. StoryGraph URLs are constructed slug-optimistically from the title with a browse-URL fallback when the slug would be empty. Cover URLs come from `covers.openlibrary.org`. `BookSearchResult.coverURL` and `RankItem.coverURLString` round-trip through the CSV codec's new `cover_url` column. See `issues/closed/live-storygraph.md`.
+`LiveBookSearchService` hits Open Library's `/search.json` (keyless, generous rate limits) and maps each hit into a `BookSearchResult`. First-author-first-ISBN heuristic. StoryGraph URLs are constructed slug-optimistically from the title with a browse-URL fallback when the slug would be empty. Cover URLs come from `covers.openlibrary.org`. `BookSearchResult.coverURL` and `RankItem.coverURLString` round-trip through the CSV codec's new `cover_url` column. See [#11](https://github.com/elsmrna/anyrank/issues/11).
 
 ## What's stubbed
 
@@ -70,13 +70,13 @@ Every category-specific search service is live:
 
 The IGDB and Spotify services share `AppOAuthTokenStore` — a small actor that caches app-level OAuth 2.0 client-credentials tokens and refreshes on demand. Both are gated by their respective `<Provider>_CLIENT_ID` / `<Provider>_CLIENT_SECRET` in `Secrets.xcconfig`; either missing → the mock service is injected instead, so the app stays runnable without secrets.
 
-The remaining stubs: Google Places photos on comparison cards (would need an extra Places SDK call per result — deferred; see `issues/live-places-photos.md`) and the educational onboarding walkthrough.
+The remaining stubs: Google Places photos on comparison cards (would need an extra Places SDK call per result — deferred; see [#16](https://github.com/elsmrna/anyrank/issues/16)) and the educational onboarding walkthrough.
 
 ## Imports and ranking sprees
 
 A one-time import pulls a whole collection (Steam library, Letterboxd / Goodreads / StoryGraph CSV export, or a pasted list) into a list as a **queue**, then the user ranks it through the normal comparison flow at their own pace. Code lives in `AnyRank/Import/` (sources, `ImportMatcher`, `ImportStore`, `ImportEnricher`) and `AnyRank/Views/Import/` (`ImportFlowView`, `RankingSpreeView`, `ImportProgressCard`).
 
-The queue (`ImportSession`) is persisted to `<Application Support>/AnyRank/imports.json`, local-only and not synced — only ranked items become part of the list (and therefore the Sheet). At most one session per list; importing more into a list with one running appends to its queue. Source ratings are carried as a *suggested* bucket on the bucket picker, never applied automatically. Queued items without artwork are enriched just in time from the category's search service, accepting exact normalized-title matches only. Sources: Steam (sign-in via Steam OpenID in a system web-auth sheet, or a profile link), Letterboxd (whole export .zip, read by the small `ZipReader`, or any CSV), IMDb (exact TMDB `/find` by IMDb ID), Goodreads, StoryGraph, and a pasted list. `FileImporters.detect` recognizes an export by its headers, so picking the "wrong" source still works. Steam reads libraries with one developer key, `STEAM_WEB_API_KEY` in `Secrets.xcconfig` — users never need one; without it the import runs against a sample library (and says so). Steam only shares libraries whose Game details are Public. See `issues/closed/import-ranking-spree.md`.
+The queue (`ImportSession`) is persisted to `<Application Support>/AnyRank/imports.json`, local-only and not synced — only ranked items become part of the list (and therefore the Sheet). At most one session per list; importing more into a list with one running appends to its queue. Source ratings are carried as a *suggested* bucket on the bucket picker, never applied automatically. Queued items without artwork are enriched just in time from the category's search service, accepting exact normalized-title matches only. Sources: Steam (sign-in via Steam OpenID in a system web-auth sheet, or a profile link), Letterboxd (whole export .zip, read by the small `ZipReader`, or any CSV), IMDb (exact TMDB `/find` by IMDb ID), Goodreads, StoryGraph, and a pasted list. `FileImporters.detect` recognizes an export by its headers, so picking the "wrong" source still works. Steam reads libraries with one developer key, `STEAM_WEB_API_KEY` in `Secrets.xcconfig` — users never need one; without it the import runs against a sample library (and says so). Steam only shares libraries whose Game details are Public. See [#8](https://github.com/elsmrna/anyrank/issues/8).
 
 ## Visual design
 
@@ -88,7 +88,7 @@ App icon, accent color, and launch background live in `AnyRank/Assets.xcassets`.
 
 Onboarding is not implemented — first launch drops the user into the empty-state of `ListsHomeView`, which has a primary "Create your first list" button. That's adequate for v1; full onboarding can come later.
 
-JSON export remains out of scope — Sheets sync covers the backup case for signed-in users, and the dedicated JSON export issue (`issues/local-backup-export.md`) is the right home for the local-only fallback.
+JSON export remains out of scope — Sheets sync covers the backup case for signed-in users, and the dedicated JSON export issue ([#17](https://github.com/elsmrna/anyrank/issues/17)) is the right home for the local-only fallback.
 
 ## What might trip you up
 
@@ -98,7 +98,7 @@ Snapshot tests rely on a pinned simulator (`iPhone 16 Pro`) — the precise simu
 
 The `Project.yml` uses a Swift package dependency on `swift-snapshot-testing`. If `xcodegen generate` doesn't resolve packages automatically, open the generated project once and let Xcode resolve dependencies, then run tests.
 
-The four buckets in the bucket picker are big tap targets but the visual treatment is deliberately neutral — color-coded outlines on tinted backgrounds. Spec § 8 called out the comparison screen and bucket picker as worth a dedicated design pass; the comparison screen shipped its pass (vertical stack, thumbnails, secondary text, step estimate — see `issues/closed/comparison-screen-design.md`). The bucket picker is next.
+The four buckets in the bucket picker are big tap targets but the visual treatment is deliberately neutral — color-coded outlines on tinted backgrounds. Spec § 8 called out the comparison screen and bucket picker as worth a dedicated design pass; the comparison screen shipped its pass (vertical stack, thumbnails, secondary text, step estimate — see [#4](https://github.com/elsmrna/anyrank/issues/4)). The bucket picker is next.
 
 ## Suggested first run
 

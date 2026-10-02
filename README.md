@@ -15,7 +15,6 @@ anyrank/
 ├── AnyRank/                Source for the iOS app target
 ├── AnyRankTests/           Unit tests (ranking algorithm)
 ├── AnyRankSnapshotTests/   Snapshot tests (visual regression)
-├── issues/                 Flat-file issue tracker
 └── README.md               This file
 ```
 
@@ -93,11 +92,11 @@ Live Google Places search is implemented and used by Restaurants, Bars, and any 
 
 Live TMDB movie search follows the same pattern: drop a `TMDB_READ_TOKEN` into `Secrets.xcconfig` and the Movies category uses `LiveMovieSearchService` against the TMDB v3 REST API; without one, it falls back to the mock. No sign-in gate on TMDB — it's unaffiliated with Google.
 
-Live Books search runs against Open Library (keyless, generous rate limits) with StoryGraph URLs constructed slug-optimistically from the title. Covers come from Open Library's cover CDN. Wired unconditionally; the mock stays available via environment injection for previews and tests. See `issues/closed/live-storygraph.md` for the design tradeoffs.
+Live Books search runs against Open Library (keyless, generous rate limits) with StoryGraph URLs constructed slug-optimistically from the title. Covers come from Open Library's cover CDN. Wired unconditionally; the mock stays available via environment injection for previews and tests. See [#11](https://github.com/elsmrna/anyrank/issues/11) for the design tradeoffs.
 
-Google Sheets sync ships as an opt-in toggle in Settings (off by default — sign-in alone identifies the user but doesn't move data off the device). When enabled, the app requests Drive/Sheets scopes, creates an "AnyRank Data" spreadsheet, and pushes one tab per list. See `issues/closed/google-oauth-sheets-sync.md` for the design notes.
+Google Sheets sync ships as an opt-in toggle in Settings (off by default — sign-in alone identifies the user but doesn't move data off the device). When enabled, the app requests Drive/Sheets scopes, creates an "AnyRank Data" spreadsheet, and pushes one tab per list. See [#5](https://github.com/elsmrna/anyrank/issues/5) for the design notes.
 
-Also deferred: educational onboarding walkthrough, JSON export. (The visual design system — palette, type, icon — is in place; see `BUILD_NOTES.md` § Visual design.) See `issues/` for the tracked items and `Spec.md` "Open TBDs" for the full list.
+Also deferred: educational onboarding walkthrough, JSON export. (The visual design system — palette, type, icon — is in place; see `BUILD_NOTES.md` § Visual design.) See [GitHub Issues](https://github.com/elsmrna/anyrank/issues) for the tracked items and `Spec.md` "Open TBDs" for the full list.
 
 ## Where to look first
 

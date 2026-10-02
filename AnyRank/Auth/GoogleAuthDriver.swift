@@ -5,7 +5,7 @@ import GoogleSignIn
 /// Real `AuthDriver` backed by the Google Sign-In iOS SDK. Only requests
 /// profile + email scopes at sign-in — Sheets/Drive scopes are added later
 /// via `requestAdditionalScopes` when the user enables sync in Settings
-/// (see `issues/closed/google-oauth-sheets-sync.md`), which re-prompts the
+/// (see https://github.com/elsmrna/anyrank/issues/5), which re-prompts the
 /// consent screen at that point. Keeping the initial prompt minimal
 /// increases the odds users approve it.
 struct GoogleAuthDriver: AuthDriver {
