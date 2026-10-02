@@ -134,21 +134,6 @@ enum PreviewSupport {
         }
     }
 
-    /// One songs list — smaller pool since songs feel closer at short
-    /// list sizes than albums do.
-    static func songsRepository() -> Repository {
-        makeRepository { repo in
-            let list = RankList(name: "Songs — All-time", category: .songs)
-            seedSongs(in: list, items: [
-                ("Nights", "Frank Ocean", "Blonde", 2016, 307, .loved),
-                ("Alright", "Kendrick Lamar", "To Pimp a Butterfly", 2015, 219, .loved),
-                ("Dreams", "Fleetwood Mac", "Rumours", 1977, 257, .liked),
-                ("Weird Fishes/Arpeggi", "Radiohead", "In Rainbows", 2007, 318, .liked),
-            ])
-            repo.addList(list)
-        }
-    }
-
     /// One games list spanning two buckets — for previewing the Games
     /// path with realistic platform strings.
     static func gamesRepository() -> Repository {
@@ -299,30 +284,6 @@ enum PreviewSupport {
                 item.artist = payload.artist
                 item.releaseYear = payload.year
                 item.spotifyURLString = "https://open.spotify.com/album/mock-\(payload.title.hashValue.magnitude)"
-                item.list = list
-                list.items.append(item)
-            }
-        }
-    }
-
-    private static func seedSongs(
-        in list: RankList,
-        items: [(title: String, artist: String, album: String, year: Int, seconds: Int, bucket: Bucket)]
-    ) {
-        let grouped = Dictionary(grouping: items.enumerated(), by: { $0.element.bucket })
-        for (bucket, entries) in grouped {
-            let count = entries.count
-            for (rank, (_, payload)) in entries.enumerated() {
-                let item = RankItem(
-                    name: payload.title,
-                    bucket: bucket,
-                    score: ScoreInterpolation.score(forRankIndex: rank, bucketCount: count, bucket: bucket)
-                )
-                item.artist = payload.artist
-                item.albumTitle = payload.album
-                item.releaseYear = payload.year
-                item.durationSeconds = payload.seconds
-                item.spotifyURLString = "https://open.spotify.com/track/mock-\(payload.title.hashValue.magnitude)"
                 item.list = list
                 list.items.append(item)
             }

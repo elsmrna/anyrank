@@ -81,11 +81,6 @@ struct ItemRow: View {
                 return "\(artist) · \(year)"
             }
             return item.artist ?? item.releaseYear.map { String($0) }
-        case .songs:
-            if let artist = item.artist, let album = item.albumTitle {
-                return "\(artist) · \(album)"
-            }
-            return item.artist
         case .custom, .none: return item.customLinkString
         }
     }

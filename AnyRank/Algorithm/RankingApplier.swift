@@ -110,7 +110,7 @@ enum RankingApplier {
         case .books:  return item.coverURLString
         case .anime, .manga: return item.coverURLString
         case .games:  return item.coverURLString
-        case .albums, .songs: return item.coverURLString
+        case .albums: return item.coverURLString
         case .restaurants, .bars, .stays: return PlacePhotos.url(forPlaceID: item.placeID)
         case .custom: return list.linksToMapsLocation ? PlacePhotos.url(forPlaceID: item.placeID) : nil
         }
@@ -155,14 +155,6 @@ enum RankingApplier {
                 return artist
             }
             return item.releaseYear.map { String($0) }
-        case .songs:
-            if let artist = item.artist, !artist.isEmpty {
-                if let album = item.albumTitle, !album.isEmpty {
-                    return "\(artist) · \(album)"
-                }
-                return artist
-            }
-            return nil
         case .restaurants, .bars, .stays:
             let addr = item.address ?? ""
             return addr.isEmpty ? nil : addr

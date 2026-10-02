@@ -37,7 +37,7 @@ enum ListCSVCodec {
         "anime_format", "episode_count", "anilist_url",
         "chapter_count", "volume_count",
         "platforms", "igdb_url",
-        "artist", "album_title", "duration_seconds", "spotify_url",
+        "artist", "spotify_url",
         "custom_link",
         "source_url"
     ]
@@ -82,8 +82,6 @@ enum ListCSVCodec {
             (item.platforms ?? []).joined(separator: "|"),
             item.igdbURLString ?? "",
             item.artist ?? "",
-            item.albumTitle ?? "",
-            item.durationSeconds.map { String($0) } ?? "",
             item.spotifyURLString ?? "",
             item.customLinkString ?? "",
             item.sourceURLString ?? ""
@@ -167,8 +165,6 @@ enum ListCSVCodec {
         item.igdbURLString = field(row, columnIndex, "igdb_url")
 
         item.artist = field(row, columnIndex, "artist")
-        item.albumTitle = field(row, columnIndex, "album_title")
-        item.durationSeconds = field(row, columnIndex, "duration_seconds").flatMap(Int.init)
         item.spotifyURLString = field(row, columnIndex, "spotify_url")
 
         item.customLinkString = field(row, columnIndex, "custom_link")

@@ -70,16 +70,10 @@ final class RankItem: Identifiable {
     var platforms: [String]?
     var igdbURLString: String?
 
-    // MARK: Music metadata (shared by Albums + Songs)
-    /// Artist name — required for any Music item. Multi-artist tracks
-    /// stored as a single string joined with ", " to keep the CSV
-    /// dialect simple.
+    // MARK: Album metadata
+    /// Artist name. Multiple artists are stored as one string joined with
+    /// ", " to keep the CSV dialect simple.
     var artist: String?
-    /// Only meaningful for Songs — the album this track appears on.
-    /// Nil for Albums.
-    var albumTitle: String?
-    /// Only meaningful for Songs. Nil for Albums.
-    var durationSeconds: Int?
     var spotifyURLString: String?
 
     // MARK: Custom metadata
@@ -105,7 +99,7 @@ final class RankItem: Identifiable {
         case .books: urlString = storyGraphURLString
         case .anime, .manga: urlString = aniListURLString
         case .games: urlString = igdbURLString
-        case .albums, .songs: urlString = spotifyURLString
+        case .albums: urlString = spotifyURLString
         case .custom, .none:
             // Custom items can carry Maps metadata when the list opted
             // into `linksToMapsLocation`; prefer that as the canonical

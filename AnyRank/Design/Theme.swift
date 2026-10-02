@@ -146,7 +146,7 @@ extension Category {
     /// home screen has some rhythm without introducing new hues.
     var tint: Color {
         switch self {
-        case .restaurants, .anime, .songs: return Theme.accent
+        case .restaurants, .anime:         return Theme.accent
         case .bars, .games, .manga:        return Theme.olive
         case .movies, .albums, .stays:     return Theme.espresso
         case .books, .custom:              return Theme.taupe
@@ -165,7 +165,6 @@ extension Category {
         case .manga:       return "manga"
         case .games:       return "game"
         case .albums:      return "album"
-        case .songs:       return "song"
         case .custom:      return "item"
         }
     }
@@ -191,7 +190,6 @@ extension Category {
         case .manga:       return "e.g. Shōnen favorites"
         case .games:       return "e.g. Co-op games"
         case .albums:      return "e.g. Desert island albums"
-        case .songs:       return "e.g. Running playlist"
         case .custom:      return "e.g. Natural wines"
         }
     }
@@ -199,7 +197,7 @@ extension Category {
     /// Whether this category has cover art worth showing (posters, covers).
     var hasArtwork: Bool {
         switch self {
-        case .movies, .books, .anime, .manga, .games, .albums, .songs: return true
+        case .movies, .books, .anime, .manga, .games, .albums: return true
         case .restaurants, .bars, .stays, .custom: return false
         }
     }
@@ -208,7 +206,7 @@ extension Category {
     var artworkAspectRatio: CGFloat {
         switch self {
         case .movies, .books, .anime, .manga, .games: return 2.0 / 3.0
-        case .albums, .songs, .restaurants, .bars, .stays, .custom: return 1
+        case .albums, .restaurants, .bars, .stays, .custom: return 1
         }
     }
 }

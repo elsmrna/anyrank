@@ -33,7 +33,6 @@ struct StagedItem: Identifiable, Equatable, Codable {
 
     // Music
     var album: AlbumSearchResult?
-    var song: SongSearchResult?
 
     // Custom
     var customLink: String?
@@ -125,14 +124,6 @@ struct StagedItem: Identifiable, Equatable, Codable {
             item.coverURLString = album.coverURL?.absoluteString
             item.spotifyURLString = album.spotifyURL?.absoluteString
         }
-        if let song {
-            item.artist = song.artist
-            item.albumTitle = song.albumTitle
-            item.releaseYear = song.releaseYear
-            item.durationSeconds = song.durationSeconds
-            item.coverURLString = song.coverURL?.absoluteString
-            item.spotifyURLString = song.spotifyURL?.absoluteString
-        }
         if let customLink {
             item.customLinkString = customLink
         }
@@ -158,7 +149,7 @@ struct StagedItem: Identifiable, Equatable, Codable {
             switch category {
             case .books:
                 if item.author == nil { item.author = fallbackCreator }
-            case .albums, .songs:
+            case .albums:
                 if item.artist == nil { item.artist = fallbackCreator }
             default:
                 break
@@ -178,7 +169,6 @@ struct StagedItem: Identifiable, Equatable, Codable {
         case .manga:  return manga?.coverURL?.absoluteString
         case .games:  return game?.coverURL?.absoluteString
         case .albums: return album?.coverURL?.absoluteString
-        case .songs:  return song?.coverURL?.absoluteString
         case .restaurants, .bars, .stays, .custom: return PlacePhotos.url(forPlaceID: place?.id)
         }
     }
@@ -213,9 +203,6 @@ struct StagedItem: Identifiable, Equatable, Codable {
         case .albums:
             guard let album else { return joined([fallbackCreator, year]) }
             return joined([album.artist, album.releaseYear.map(String.init)])
-        case .songs:
-            guard let song else { return fallbackCreator }
-            return joined([song.artist, song.albumTitle])
         case .restaurants, .bars, .stays, .custom:
             return place?.address
         }

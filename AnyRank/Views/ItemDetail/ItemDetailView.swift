@@ -189,7 +189,7 @@ struct ItemDetailView: View {
         case .books:              return "StoryGraph"
         case .anime, .manga:      return "AniList"
         case .games:              return "IGDB"
-        case .albums, .songs:     return "Spotify"
+        case .albums:             return "Spotify"
         case .custom:             return item.mapsURLString != nil ? "Maps" : "browser"
         }
     }
@@ -201,7 +201,7 @@ struct ItemDetailView: View {
         case .movies, .anime:     return "Watched"
         case .books, .manga:      return "Read"
         case .games:              return "Played"
-        case .albums, .songs:     return "Listened"
+        case .albums:             return "Listened"
         case .custom:             return "Date"
         }
     }
@@ -218,7 +218,7 @@ struct ItemDetailView: View {
         switch list.category {
         case .restaurants, .bars, .stays, .custom: value = item.address
         case .books:                       value = item.author
-        case .albums, .songs:              value = item.artist
+        case .albums:                      value = item.artist
         case .movies, .anime, .manga, .games: value = nil
         }
         return value.flatMap { $0.isEmpty ? nil : $0 }
@@ -228,8 +228,6 @@ struct ItemDetailView: View {
     private var heroFacts: [String] {
         var facts: [String] = []
         switch list.category {
-        case .songs:
-            if let album = item.albumTitle, !album.isEmpty { facts.append(album) }
         case .anime:
             if let format = item.animeFormat, !format.isEmpty {
                 facts.append(format.count <= 3 ? format.uppercased() : format.capitalized)
@@ -250,10 +248,6 @@ struct ItemDetailView: View {
         case .games:
             if let platforms = item.platforms, !platforms.isEmpty {
                 facts.append(platforms.joined(separator: ", "))
-            }
-        case .songs:
-            if let duration = item.durationSeconds {
-                facts.append(String(format: "%d:%02d", duration / 60, duration % 60))
             }
         default:
             break

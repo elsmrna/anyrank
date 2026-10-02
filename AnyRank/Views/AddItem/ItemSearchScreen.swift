@@ -40,8 +40,6 @@ struct ItemSearchScreen: View {
             GameSearchScreen(onIdentified: onIdentified)
         case .albums:
             AlbumSearchScreen(onIdentified: onIdentified)
-        case .songs:
-            SongSearchScreen(onIdentified: onIdentified)
         case .custom:
             // Custom lists that opted into Maps lookup at create time
             // use the same Places picker as Restaurants/Bars, with an

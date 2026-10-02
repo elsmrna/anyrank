@@ -133,10 +133,6 @@ enum ImportMatcher {
                 if let url = album.spotifyURL { strongKeys.insert("spotify:\(url.absoluteString)") }
                 year = album.releaseYear
             }
-            if let song = staged.song {
-                if let url = song.spotifyURL { strongKeys.insert("spotify:\(url.absoluteString)") }
-                year = song.releaseYear
-            }
             if year == nil { year = staged.fallbackYear }
         }
 

@@ -86,13 +86,6 @@ struct ImportEnricher {
                 }) else { return nil }
                 updated.album = hit
 
-            case .songs where item.song == nil:
-                let results = try await music.searchSongs(query: item.name)
-                guard let hit = results.first(where: {
-                    ImportMatcher.normalize($0.title) == name && creatorsAgree($0.artist, item.fallbackCreator)
-                }) else { return nil }
-                updated.song = hit
-
             default:
                 // Places need sign-in and are too ambiguous by name alone;
                 // custom items have no catalog.

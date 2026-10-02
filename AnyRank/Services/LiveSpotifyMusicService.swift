@@ -10,7 +10,6 @@ import Foundation
 ///
 /// Endpoints:
 ///   - `GET /v1/search?type=album` for `searchAlbums`
-///   - `GET /v1/search?type=track` for `searchSongs`
 ///
 /// `init?()` returns nil when either `SPOTIFY_CLIENT_ID` or
 /// `SPOTIFY_CLIENT_SECRET` is missing — `AnyRankApp` falls back to
@@ -47,25 +46,6 @@ final class LiveSpotifyMusicService: MusicSearchService, @unchecked Sendable {
                 releaseYear: Self.year(from: a.release_date),
                 coverURL: (a.images ?? []).first.flatMap { URL(string: $0.url) },
                 spotifyURL: a.external_urls?.spotify.flatMap { URL(string: $0) }
-            )
-        }
-    }
-
-    func searchSongs(query: String) async throws -> [SongSearchResult] {
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return [] }
-        let data = try await search(query: trimmed, type: "track")
-        let decoded = try JSONDecoder().decode(SearchTracksResponse.self, from: data)
-        return decoded.tracks.items.map { t in
-            SongSearchResult(
-                id: t.id,
-                title: t.name,
-                artist: (t.artists ?? []).map(\.name).joined(separator: ", "),
-                albumTitle: t.album?.name,
-                releaseYear: Self.year(from: t.album?.release_date),
-                durationSeconds: t.duration_ms.map { $0 / 1000 },
-                coverURL: (t.album?.images ?? []).first.flatMap { URL(string: $0.url) },
-                spotifyURL: t.external_urls?.spotify.flatMap { URL(string: $0) }
             )
         }
     }
@@ -145,26 +125,12 @@ private struct SearchAlbumsResponse: Decodable {
     struct AlbumPage: Decodable { let items: [SpotifyAlbum] }
 }
 
-private struct SearchTracksResponse: Decodable {
-    let tracks: TrackPage
-    struct TrackPage: Decodable { let items: [SpotifyTrack] }
-}
-
 private struct SpotifyAlbum: Decodable {
     let id: String
     let name: String
     let release_date: String?
     let artists: [SpotifyArtist]?
     let images: [SpotifyImage]?
-    let external_urls: ExternalURLs?
-}
-
-private struct SpotifyTrack: Decodable {
-    let id: String
-    let name: String
-    let duration_ms: Int?
-    let artists: [SpotifyArtist]?
-    let album: SpotifyAlbum?
     let external_urls: ExternalURLs?
 }
 
