@@ -1,6 +1,6 @@
 # Product Spec — Relative-Ranking iOS App
 
-_Working name: TBD (folder is `anyrank`). Single source of truth for v1 requirements. All decisions below are committed unless explicitly listed under "Open TBDs"._
+_Name: AnyRank. Single source of truth for v1 requirements. All decisions below are committed unless explicitly listed under "Open TBDs"._
 
 ## 1. Overview
 
@@ -88,12 +88,4 @@ Photos, tags, and richer metadata for custom categories (number fields, dropdown
 
 Re-rank prompt cadence: the value of N (additions before a periodic re-rank prompt is shown). Suggested 10; revisit after first usage.
 
-App name and branding: working folder is `anyrank`; final name, icon, and color palette pending.
-
-API key sourcing and rate-limit strategy: Google Places billing setup, TMDB API key registration, secure storage of keys (likely a config file excluded from version control plus a build-time injection step).
-
-Local backup/export format: before Sheets sync ships, users have no way to back up their data. Worth shipping a JSON export to share-sheet at a minimum.
-
 Onboarding: first-launch experience, sample lists, empty-state copy. Likely a one-screen explainer plus a "create your first list" CTA.
-
-Comparison-screen visual treatment: how to make the side-by-side comparison feel decisive and fast. Worth a design pass before implementation.
