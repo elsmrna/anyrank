@@ -40,6 +40,8 @@ struct ItemSearchScreen: View {
             MangaSearchScreen(onIdentified: onIdentified)
         case .games:
             GameSearchScreen(onIdentified: onIdentified)
+        case .boardGames:
+            BoardGameSearchScreen(onIdentified: onIdentified)
         case .albums:
             AlbumSearchScreen(onIdentified: onIdentified)
         case .custom:

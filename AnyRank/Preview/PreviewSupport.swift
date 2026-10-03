@@ -199,6 +199,20 @@ enum PreviewSupport {
         }
     }
 
+    /// One board game list from the mock catalog.
+    static func boardGamesRepository() -> Repository {
+        makeRepository { repo in
+            let games = RankList(name: "Board games", category: .boardGames)
+            let buckets: [Bucket] = [.loved, .loved, .liked, .liked, .fine, .didntLike]
+            seedStaged(in: games, items: zip(MockBoardGameSearchService.pool, buckets).map { game, bucket in
+                var staged = StagedItem(name: game.name, category: .boardGames)
+                staged.boardGame = game
+                return (staged, bucket)
+            })
+            repo.addList(games)
+        }
+    }
+
     /// One Stays list of LA hotels from the mock Places catalog.
     static func staysRepository() -> Repository {
         makeRepository { repo in

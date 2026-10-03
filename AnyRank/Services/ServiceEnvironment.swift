@@ -32,6 +32,10 @@ private struct GameServiceKey: EnvironmentKey {
     static let defaultValue: any GameSearchService = MockGameSearchService()
 }
 
+private struct BoardGameServiceKey: EnvironmentKey {
+    static let defaultValue: any BoardGameSearchService = MockBoardGameSearchService()
+}
+
 private struct MusicServiceKey: EnvironmentKey {
     static let defaultValue: any MusicSearchService = MockMusicSearchService()
 }
@@ -64,6 +68,10 @@ extension EnvironmentValues {
     var gameService: any GameSearchService {
         get { self[GameServiceKey.self] }
         set { self[GameServiceKey.self] = newValue }
+    }
+    var boardGameService: any BoardGameSearchService {
+        get { self[BoardGameServiceKey.self] }
+        set { self[BoardGameServiceKey.self] = newValue }
     }
     var musicService: any MusicSearchService {
         get { self[MusicServiceKey.self] }

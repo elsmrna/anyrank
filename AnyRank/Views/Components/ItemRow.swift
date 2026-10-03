@@ -72,6 +72,8 @@ struct ItemRow: View {
             // light novel of the same series.
             let parts = [item.animeFormat, item.releaseYear.map { String($0) }].compactMap { $0 }.filter { !$0.isEmpty }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        case .boardGames:
+            return BoardGameText.secondary(year: item.releaseYear, minPlayers: item.minPlayers, maxPlayers: item.maxPlayers)
         case .games:
             // Year is the most useful disambiguator across remasters.
             // Platforms fit better in the item detail than a row.

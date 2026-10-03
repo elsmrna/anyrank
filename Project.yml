@@ -69,6 +69,7 @@ targets:
         SpotifyClientID: $(SPOTIFY_CLIENT_ID)
         SpotifyClientSecret: $(SPOTIFY_CLIENT_SECRET)
         SteamWebAPIKey: $(STEAM_WEB_API_KEY)
+        BGGAPIToken: $(BGG_API_TOKEN)
         CFBundleURLTypes:
           - CFBundleTypeRole: Editor
             CFBundleURLSchemes:

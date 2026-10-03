@@ -29,6 +29,9 @@ struct AnyRankApp: App {
     /// configured, mock otherwise.
     private let gameService: any GameSearchService
 
+    /// BoardGameGeek when a token is configured, mock otherwise.
+    private let boardGameService: any BoardGameSearchService
+
     /// Concrete album service: Spotify (client credentials) when
     /// configured, mock otherwise.
     private let musicService: any MusicSearchService
@@ -104,6 +107,12 @@ struct AnyRankApp: App {
 
         // Spotify (client-credentials, shared refresh via
         // `AppOAuthTokenStore`). Same failable-init contract.
+        if let live = LiveBGGSearchService() {
+            self.boardGameService = live
+        } else {
+            self.boardGameService = MockBoardGameSearchService()
+        }
+
         if let live = LiveSpotifyMusicService() {
             self.musicService = live
         } else {
@@ -140,6 +149,7 @@ struct AnyRankApp: App {
                 .environment(\.animeService, LiveAniListSearchService())
                 .environment(\.mangaService, LiveAniListSearchService())
                 .environment(\.gameService, gameService)
+                .environment(\.boardGameService, boardGameService)
                 .environment(\.musicService, musicService)
                 .environment(\.steamLibraryService, steamService)
                 .environment(\.importStore, importStore)

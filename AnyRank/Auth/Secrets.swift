@@ -63,6 +63,11 @@ enum Secrets {
     /// runs against a sample library.
     static var steamWebAPIKey: String? { readNonEmpty("SteamWebAPIKey") }
 
+    /// BoardGameGeek XML API token, from an application registered at
+    /// boardgamegeek.com/applications. Missing → board game search uses the
+    /// mock catalog.
+    static var bggAPIToken: String? { readNonEmpty("BGGAPIToken") }
+
     private static func readNonEmpty(_ key: String) -> String? {
         guard let raw = Bundle.main.object(forInfoDictionaryKey: key) as? String else {
             return nil

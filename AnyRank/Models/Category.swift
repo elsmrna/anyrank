@@ -12,6 +12,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
     case anime
     case manga
     case games
+    case boardGames
     case albums
     case custom
 
@@ -28,6 +29,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
         case .anime: return "Anime"
         case .manga: return "Manga"
         case .games: return "Games"
+        case .boardGames: return "Board games"
         case .albums: return "Albums"
         case .custom: return "Custom"
         }
@@ -37,7 +39,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
     /// Custom uses a free-text name + pasted link instead.
     var supportsExternalSearch: Bool {
         switch self {
-        case .restaurants, .bars, .stays, .movies, .tv, .books, .anime, .manga, .games, .albums: return true
+        case .restaurants, .bars, .stays, .movies, .tv, .books, .anime, .manga, .games, .boardGames, .albums: return true
         case .custom: return false
         }
     }
@@ -53,6 +55,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
         case .anime: return "tv"
         case .manga: return "book.pages"
         case .games: return "gamecontroller"
+        case .boardGames: return "dice"
         case .albums: return "opticaldisc"
         case .custom: return "list.bullet.rectangle"
         }

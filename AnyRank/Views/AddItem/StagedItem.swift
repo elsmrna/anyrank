@@ -34,6 +34,9 @@ struct StagedItem: Identifiable, Equatable, Codable {
     // Games
     var game: GameSearchResult?
 
+    // Board games
+    var boardGame: BoardGameSearchResult?
+
     // Music
     var album: AlbumSearchResult?
 
@@ -128,6 +131,14 @@ struct StagedItem: Identifiable, Equatable, Codable {
             item.coverURLString = game.coverURL?.absoluteString
             item.igdbURLString = game.igdbURL?.absoluteString
         }
+        if let boardGame {
+            item.releaseYear = boardGame.yearPublished
+            item.minPlayers = boardGame.minPlayers
+            item.maxPlayers = boardGame.maxPlayers
+            item.playingMinutes = boardGame.playingMinutes
+            item.coverURLString = boardGame.coverURL?.absoluteString
+            item.bggURLString = boardGame.bggURL?.absoluteString
+        }
         if let album {
             item.artist = album.artist
             item.releaseYear = album.releaseYear
@@ -179,6 +190,7 @@ struct StagedItem: Identifiable, Equatable, Codable {
         case .anime:  return anime?.coverURL?.absoluteString
         case .manga:  return manga?.coverURL?.absoluteString
         case .games:  return game?.coverURL?.absoluteString
+        case .boardGames: return boardGame?.coverURL?.absoluteString
         case .albums: return album?.coverURL?.absoluteString
         case .restaurants, .bars, .stays, .custom: return PlacePhotos.url(forPlaceID: place?.id)
         }
@@ -214,6 +226,9 @@ struct StagedItem: Identifiable, Equatable, Codable {
             guard let game else { return year }
             let platforms = GameSearchScreen.compactPlatforms(game.platforms)
             return joined([platforms, game.firstReleaseYear.map(String.init) ?? year])
+        case .boardGames:
+            guard let boardGame else { return year }
+            return BoardGameText.secondary(year: boardGame.yearPublished, minPlayers: boardGame.minPlayers, maxPlayers: boardGame.maxPlayers)
         case .albums:
             guard let album else { return joined([fallbackCreator, year]) }
             return joined([album.artist, album.releaseYear.map(String.init)])

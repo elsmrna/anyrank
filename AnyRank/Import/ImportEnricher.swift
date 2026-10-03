@@ -16,6 +16,7 @@ struct ImportEnricher {
     let anime: any AnimeSearchService
     var manga: any MangaSearchService = MockMangaSearchService()
     let games: any GameSearchService
+    var boardGames: any BoardGameSearchService = MockBoardGameSearchService()
     let music: any MusicSearchService
 
     /// An enriched copy of `item`, or nil when there's nothing to add or no
@@ -91,6 +92,13 @@ struct ImportEnricher {
                     ImportMatcher.normalize($0.name) == name && yearsAgree($0.firstReleaseYear, item.fallbackYear)
                 }) else { return nil }
                 updated.game = hit
+
+            case .boardGames where item.boardGame == nil:
+                let results = try await boardGames.searchBoardGames(query: item.name)
+                guard let hit = results.first(where: {
+                    ImportMatcher.normalize($0.name) == name && yearsAgree($0.yearPublished, item.fallbackYear)
+                }) else { return nil }
+                updated.boardGame = hit
 
             case .albums where item.album == nil:
                 let results = try await music.searchAlbums(query: item.name)

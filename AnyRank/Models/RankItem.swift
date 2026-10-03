@@ -75,6 +75,13 @@ final class RankItem: Identifiable {
     var platforms: [String]?
     var igdbURLString: String?
 
+    // MARK: Board game metadata
+    // Board games reuse `releaseYear` and `coverURLString`.
+    var minPlayers: Int?
+    var maxPlayers: Int?
+    var playingMinutes: Int?
+    var bggURLString: String?
+
     // MARK: Album metadata
     /// Artist name. Multiple artists are stored as one string joined with
     /// ", " to keep the CSV dialect simple.
@@ -104,6 +111,7 @@ final class RankItem: Identifiable {
         case .books: urlString = storyGraphURLString
         case .anime, .manga: urlString = aniListURLString
         case .games: urlString = igdbURLString
+        case .boardGames: urlString = bggURLString
         case .albums: urlString = spotifyURLString
         case .custom, .none:
             // Custom items can carry Maps metadata when the list opted

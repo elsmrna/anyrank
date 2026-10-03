@@ -110,6 +110,7 @@ enum RankingApplier {
         case .books:  return item.coverURLString
         case .anime, .manga: return item.coverURLString
         case .games:  return item.coverURLString
+        case .boardGames: return item.coverURLString
         case .albums: return item.coverURLString
         case .restaurants, .bars, .stays: return PlacePhotos.url(forPlaceID: item.placeID)
         case .custom: return list.linksToMapsLocation ? PlacePhotos.url(forPlaceID: item.placeID) : nil
@@ -139,6 +140,8 @@ enum RankingApplier {
             let parts = [item.releaseYear.map { String($0) }, MangaLength.text(chapters: item.chapterCount, volumes: item.volumeCount)]
                 .compactMap { $0 }
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        case .boardGames:
+            return BoardGameText.secondary(year: item.releaseYear, minPlayers: item.minPlayers, maxPlayers: item.maxPlayers)
         case .games:
             var parts: [String] = []
             let platforms = item.platforms ?? []
