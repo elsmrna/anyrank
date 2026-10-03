@@ -413,9 +413,10 @@ private struct ListCard: View {
     }
 
     /// Only fan out covers when there's real art; a row of placeholders
-    /// is just noise.
+    /// is just noise. Place lists are left out: a place photo may not
+    /// exist (or no Places key is set), so they could be all placeholders.
     private var hasCoverArt: Bool {
-        list.showsArtwork
+        list.category.hasArtwork
             && topItems.contains { RankingApplier.comparisonImageURLString(for: $0, in: list) != nil }
     }
 

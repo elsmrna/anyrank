@@ -81,7 +81,7 @@ struct ItemRow: View {
                 return "\(artist) · \(year)"
             }
             return item.artist ?? item.releaseYear.map { String($0) }
-        case .custom, .none: return item.customLinkString
+        case .custom, .none: return item.address ?? item.customLinkString
         }
     }
 }
