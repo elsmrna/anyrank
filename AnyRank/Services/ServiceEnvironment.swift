@@ -12,6 +12,10 @@ private struct MovieServiceKey: EnvironmentKey {
     static let defaultValue: any MovieSearchService = MockMovieSearchService()
 }
 
+private struct TVServiceKey: EnvironmentKey {
+    static let defaultValue: any TVSearchService = MockTVSearchService()
+}
+
 private struct BookServiceKey: EnvironmentKey {
     static let defaultValue: any BookSearchService = MockBookSearchService()
 }
@@ -40,6 +44,10 @@ extension EnvironmentValues {
     var movieService: any MovieSearchService {
         get { self[MovieServiceKey.self] }
         set { self[MovieServiceKey.self] = newValue }
+    }
+    var tvService: any TVSearchService {
+        get { self[TVServiceKey.self] }
+        set { self[TVServiceKey.self] = newValue }
     }
     var bookService: any BookSearchService {
         get { self[BookServiceKey.self] }

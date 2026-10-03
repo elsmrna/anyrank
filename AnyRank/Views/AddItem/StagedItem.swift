@@ -19,6 +19,9 @@ struct StagedItem: Identifiable, Equatable, Codable {
     // Movies
     var movie: MovieSearchResult?
 
+    // TV
+    var tv: TVShowSearchResult?
+
     // Books
     var book: BookSearchResult?
 
@@ -89,6 +92,13 @@ struct StagedItem: Identifiable, Equatable, Codable {
             item.releaseYear = movie.releaseYear
             item.posterURLString = movie.posterURL?.absoluteString
             item.imdbURLString = movie.imdbURL?.absoluteString
+        }
+        if let tv {
+            item.tmdbID = tv.id
+            item.releaseYear = tv.firstAirYear
+            item.seasonCount = tv.seasonCount
+            item.posterURLString = tv.posterURL?.absoluteString
+            item.imdbURLString = tv.imdbURL?.absoluteString
         }
         if let book {
             item.author = book.author
@@ -164,6 +174,7 @@ struct StagedItem: Identifiable, Equatable, Codable {
     var artworkURLString: String? {
         switch category {
         case .movies: return movie?.posterURL?.absoluteString
+        case .tv:     return tv?.posterURL?.absoluteString
         case .books:  return book?.coverURL?.absoluteString
         case .anime:  return anime?.coverURL?.absoluteString
         case .manga:  return manga?.coverURL?.absoluteString
@@ -184,6 +195,9 @@ struct StagedItem: Identifiable, Equatable, Codable {
         switch category {
         case .movies:
             return (movie?.releaseYear).map(String.init) ?? year
+        case .tv:
+            guard let tv else { return year }
+            return TVShowText.secondary(year: tv.firstAirYear, seasons: tv.seasonCount)
         case .books:
             guard let book else { return joined([fallbackCreator, year]) }
             return joined([book.author, book.publicationYear.map(String.init)])

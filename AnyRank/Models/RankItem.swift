@@ -41,6 +41,11 @@ final class RankItem: Identifiable {
     var posterURLString: String?
     var imdbURLString: String?
 
+    // MARK: TV metadata
+    // TV reuses `tmdbID` (a TMDB TV ID), `releaseYear` (first air year),
+    // `posterURLString`, and `imdbURLString`.
+    var seasonCount: Int?
+
     // MARK: Books metadata
     var author: String?
     var isbn: String?
@@ -95,7 +100,7 @@ final class RankItem: Identifiable {
         let urlString: String?
         switch list?.category {
         case .restaurants, .bars, .stays: urlString = mapsURLString
-        case .movies: urlString = imdbURLString
+        case .movies, .tv: urlString = imdbURLString
         case .books: urlString = storyGraphURLString
         case .anime, .manga: urlString = aniListURLString
         case .games: urlString = igdbURLString

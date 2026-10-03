@@ -24,7 +24,7 @@ struct LiveMovieSearchService: MovieSearchService {
     /// Cap on external-id lookups per search. The top 8 results cover
     /// every reasonable autocomplete UI; going deeper burns rate budget
     /// with no user-visible benefit.
-    private static let detailFanoutLimit = 8
+    static let detailFanoutLimit = 8
 
     private let readToken: String
     private let session: URLSession
@@ -120,7 +120,7 @@ struct LiveMovieSearchService: MovieSearchService {
 
     // MARK: - HTTP
 
-    private func get(url: URL) async throws -> Data {
+    fileprivate func get(url: URL) async throws -> Data {
         var request = URLRequest(url: url)
         request.setValue("Bearer \(readToken)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -137,12 +137,12 @@ struct LiveMovieSearchService: MovieSearchService {
     /// Poster URL uses TMDB's image CDN at a moderate width — enough for
     /// list rows and detail thumbnails, small enough not to blow the
     /// network budget on typeahead. `w342` is the standard "medium" tier.
-    private static func posterURL(fromPath path: String) -> URL? {
+    fileprivate static func posterURL(fromPath path: String) -> URL? {
         URL(string: "https://image.tmdb.org/t/p/w342\(path)")
     }
 
     /// TMDB returns release dates as `YYYY-MM-DD`. We only want the year.
-    private static func year(from releaseDate: String) -> Int? {
+    fileprivate static func year(from releaseDate: String) -> Int? {
         Int(releaseDate.prefix(4))
     }
 }
@@ -169,4 +169,83 @@ private struct TMDBFindResponse: Decodable {
 /// Minimal TMDB `/movie/{id}/external_ids` response shape.
 private struct TMDBExternalIDs: Decodable {
     let imdb_id: String?
+}
+
+// MARK: - TV
+
+/// TV shows share the TMDB token and client with movies.
+///
+///   1. `GET /3/search/tv?query=…` for titles, first-air dates and posters.
+///   2. `GET /3/tv/{id}?append_to_response=external_ids` for the season
+///      count and IMDb ID in one call, over the top few hits.
+extension LiveMovieSearchService: TVSearchService {
+
+    func searchShows(query: String) async throws -> [TVShowSearchResult] {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return [] }
+
+        var components = URLComponents(string: "https://api.themoviedb.org/3/search/tv")!
+        components.queryItems = [
+            URLQueryItem(name: "query", value: trimmed),
+            URLQueryItem(name: "include_adult", value: "false"),
+        ]
+        guard let url = components.url else { return [] }
+        let hits = try JSONDecoder().decode(TMDBTVSearchResponse.self, from: try await get(url: url)).results
+
+        var results: [TVShowSearchResult] = []
+        for hit in hits.prefix(Self.detailFanoutLimit) {
+            let details = try? await showDetails(id: hit.id)
+            results.append(TVShowSearchResult(
+                id: hit.id,
+                title: hit.name,
+                firstAirYear: hit.first_air_date.flatMap { Self.year(from: $0) },
+                seasonCount: details?.number_of_seasons,
+                posterURL: hit.poster_path.flatMap { Self.posterURL(fromPath: $0) },
+                imdbURL: details?.external_ids?.imdb_id.flatMap { $0.isEmpty ? nil : URL(string: "https://www.imdb.com/title/\($0)/") }
+            ))
+        }
+        return results
+    }
+
+    func lookupShow(imdbID: String) async throws -> TVShowSearchResult? {
+        var components = URLComponents(string: "https://api.themoviedb.org/3/find/\(imdbID)")!
+        components.queryItems = [URLQueryItem(name: "external_source", value: "imdb_id")]
+        guard let url = components.url else { return nil }
+        let found = try JSONDecoder().decode(TMDBTVFindResponse.self, from: try await get(url: url))
+        guard let hit = found.tv_results.first else { return nil }
+        let details = try? await showDetails(id: hit.id)
+        return TVShowSearchResult(
+            id: hit.id,
+            title: hit.name,
+            firstAirYear: hit.first_air_date.flatMap { Self.year(from: $0) },
+            seasonCount: details?.number_of_seasons,
+            posterURL: hit.poster_path.flatMap { Self.posterURL(fromPath: $0) },
+            imdbURL: URL(string: "https://www.imdb.com/title/\(imdbID)/")
+        )
+    }
+
+    private func showDetails(id: Int) async throws -> TMDBTVDetails {
+        let url = URL(string: "https://api.themoviedb.org/3/tv/\(id)?append_to_response=external_ids")!
+        return try JSONDecoder().decode(TMDBTVDetails.self, from: try await get(url: url))
+    }
+}
+
+private struct TMDBTVSearchResponse: Decodable {
+    let results: [Raw]
+
+    struct Raw: Decodable {
+        let id: Int
+        let name: String
+        let first_air_date: String?
+        let poster_path: String?
+    }
+}
+
+private struct TMDBTVFindResponse: Decodable {
+    let tv_results: [TMDBTVSearchResponse.Raw]
+}
+
+private struct TMDBTVDetails: Decodable {
+    let number_of_seasons: Int?
+    let external_ids: TMDBExternalIDs?
 }

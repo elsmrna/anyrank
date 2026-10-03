@@ -22,6 +22,9 @@ struct AnyRankApp: App {
     /// Google, so tying it to sign-in would be misleading.
     private let movieService: any MovieSearchService
 
+    /// TV shows come from TMDB too, through the same client and token.
+    private let tvService: any TVSearchService
+
     /// Concrete Game service — live IGDB when Twitch credentials are
     /// configured, mock otherwise.
     private let gameService: any GameSearchService
@@ -85,8 +88,10 @@ struct AnyRankApp: App {
         // the mock instead.
         if let live = LiveMovieSearchService() {
             self.movieService = live
+            self.tvService = live
         } else {
             self.movieService = MockMovieSearchService()
+            self.tvService = MockTVSearchService()
         }
 
         // IGDB via Twitch client credentials — same failable-init
@@ -125,6 +130,7 @@ struct AnyRankApp: App {
                 .environment(syncCoordinator)
                 .environment(\.placesService, placesService)
                 .environment(\.movieService, movieService)
+                .environment(\.tvService, tvService)
                 // Open Library is keyless and rate-limit-friendly, so the
                 // Live book service is safe to inject unconditionally.
                 // Previews and tests still override with the mock via

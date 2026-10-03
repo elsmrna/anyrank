@@ -122,6 +122,10 @@ enum ImportMatcher {
                 if movie.id > 0 { strongKeys.insert("tmdb:\(movie.id)") }
                 year = movie.releaseYear
             }
+            if let tv = staged.tv {
+                if tv.id > 0 { strongKeys.insert("tmdbtv:\(tv.id)") }
+                year = tv.firstAirYear
+            }
             if let book = staged.book {
                 if let isbn = book.isbn.flatMap(Self.isbnKey) { strongKeys.insert(isbn) }
                 year = book.publicationYear

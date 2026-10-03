@@ -52,7 +52,7 @@ struct ItemRow: View {
     private var secondaryText: String? {
         switch item.list?.category {
         case .restaurants, .bars, .stays: return item.address
-        case .movies: return item.releaseYear.map { String($0) }
+        case .movies, .tv: return item.releaseYear.map { String($0) }
         case .books:
             // Author is the most useful disambiguator; year is appended
             // when present since multiple editions of the same title exist.

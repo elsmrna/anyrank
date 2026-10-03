@@ -15,6 +15,7 @@ enum DemoSeed {
         let sources = [
             PreviewSupport.customMapsLinkedRepository(),
             PreviewSupport.staysRepository(),
+            PreviewSupport.tvRepository(),
             PreviewSupport.mangaRepository(),
             PreviewSupport.gamesRepository(),
             PreviewSupport.animeRepository(),
@@ -47,6 +48,7 @@ enum DemoSeed {
         "Manga": 26,
         "Stays — LA": 60,
         "Movies": 30,
+        "TV — All-time": 40,
         "Games — All-time": 50,
         "Bars — Downtown": 120,
         "Anime — All-time": 200,

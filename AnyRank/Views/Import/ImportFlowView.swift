@@ -18,7 +18,13 @@ final class ImportDraft {
     var newListName = ""
     var skipNeverEngaged = true
 
-    var category: Category { source.category ?? pastedCategory }
+    /// The list's category when importing from a list's menu.
+    var fixedCategory: Category?
+
+    var category: Category {
+        if let fixedCategory, source.canTarget(fixedCategory) { return fixedCategory }
+        return source.category ?? pastedCategory
+    }
 }
 
 /// Sheet for a one-time import: pick a source, provide input, preview what
@@ -47,6 +53,7 @@ struct ImportFlowView: View {
                 draft.source = source
                 if let targetList {
                     draft.pastedCategory = targetList.category
+                    draft.fixedCategory = targetList.category
                     draft.target = .existing(targetList.id)
                 }
                 draft.newListName = source.defaultListName
@@ -438,10 +445,11 @@ private struct FileInputScreen: View {
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             let files = try FileImporters.ImportFile.load(from: url)
             let detected = FileImporters.detect(files) ?? source
-            if let fixedCategory, let category = detected.category, category != fixedCategory {
+            if let fixedCategory, !detected.canTarget(fixedCategory) {
                 throw FileImporters.ParseError.wrongCategory(source: detected, listCategory: fixedCategory)
             }
-            let candidates = try FileImporters.candidates(from: files, source: detected, category: detected.category ?? .custom)
+            let category = fixedCategory.flatMap { detected.canTarget($0) ? $0 : nil } ?? detected.category ?? .custom
+            let candidates = try FileImporters.candidates(from: files, source: detected, category: category)
             onLoaded(candidates, detected)
         } catch {
             errorMessage = error.localizedDescription
@@ -477,7 +485,7 @@ struct ExportGuide {
             )
         case .imdb:
             return ExportGuide(
-                detail: "Films you've rated, highest first, with posters matched exactly by IMDb ID. Exported lists and your watchlist work too.",
+                detail: "Films you've rated (or, into a TV list, shows), highest first, with posters matched exactly by IMDb ID. Exported lists and your watchlist work too.",
                 steps: [
                     "Open your IMDb ratings and sign in if asked.",
                     "Tap the ⋯ menu (or the export icon) and choose Export.",

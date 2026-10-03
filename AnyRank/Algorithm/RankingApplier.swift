@@ -106,7 +106,7 @@ enum RankingApplier {
     /// use a photo reference by place ID (see `PlacePhotos`).
     static func comparisonImageURLString(for item: RankItem, in list: RankList) -> String? {
         switch list.category {
-        case .movies: return item.posterURLString
+        case .movies, .tv: return item.posterURLString
         case .books:  return item.coverURLString
         case .anime, .manga: return item.coverURLString
         case .games:  return item.coverURLString
@@ -122,6 +122,8 @@ enum RankingApplier {
         switch list.category {
         case .movies:
             return item.releaseYear.map { String($0) }
+        case .tv:
+            return TVShowText.secondary(year: item.releaseYear, seasons: item.seasonCount)
         case .books:
             if let author = item.author, !author.isEmpty {
                 if let year = item.releaseYear { return "\(author) · \(year)" }

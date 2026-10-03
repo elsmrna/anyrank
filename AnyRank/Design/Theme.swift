@@ -146,7 +146,7 @@ extension Category {
     /// home screen has some rhythm without introducing new hues.
     var tint: Color {
         switch self {
-        case .restaurants, .anime:         return Theme.accent
+        case .restaurants, .anime, .tv:    return Theme.accent
         case .bars, .games, .manga:        return Theme.olive
         case .movies, .albums, .stays:     return Theme.espresso
         case .books, .custom:              return Theme.taupe
@@ -160,6 +160,7 @@ extension Category {
         case .bars:        return "bar"
         case .stays:       return "stay"
         case .movies:      return "movie"
+        case .tv:          return "show"
         case .books:       return "book"
         case .anime:       return "anime"
         case .manga:       return "manga"
@@ -185,6 +186,7 @@ extension Category {
         case .bars:        return "e.g. Cocktail bars — NYC"
         case .stays:       return "e.g. Hotels in Japan"
         case .movies:      return "e.g. Films of 2025"
+        case .tv:          return "e.g. Comfort rewatches"
         case .books:       return "e.g. Sci-fi favorites"
         case .anime:       return "e.g. Seasonal anime"
         case .manga:       return "e.g. Shōnen favorites"
@@ -197,7 +199,7 @@ extension Category {
     /// Whether this category has cover art worth showing (posters, covers).
     var hasArtwork: Bool {
         switch self {
-        case .movies, .books, .anime, .manga, .games, .albums: return true
+        case .movies, .tv, .books, .anime, .manga, .games, .albums: return true
         case .restaurants, .bars, .stays, .custom: return false
         }
     }
@@ -205,7 +207,7 @@ extension Category {
     /// Aspect ratio (width / height) of the category's cover art.
     var artworkAspectRatio: CGFloat {
         switch self {
-        case .movies, .books, .anime, .manga, .games: return 2.0 / 3.0
+        case .movies, .tv, .books, .anime, .manga, .games: return 2.0 / 3.0
         case .albums, .restaurants, .bars, .stays, .custom: return 1
         }
     }

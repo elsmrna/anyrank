@@ -11,6 +11,7 @@ import Foundation
 /// compatible year/creator is accepted. A wrong poster is worse than none.
 struct ImportEnricher {
     let movies: any MovieSearchService
+    var tv: any TVSearchService = MockTVSearchService()
     let books: any BookSearchService
     let anime: any AnimeSearchService
     var manga: any MangaSearchService = MockMangaSearchService()
@@ -36,6 +37,18 @@ struct ImportEnricher {
                     ImportMatcher.normalize($0.title) == name && yearsAgree($0.releaseYear, item.fallbackYear)
                 }) else { return nil }
                 updated.movie = hit
+
+            case .tv where item.tv == nil:
+                if let imdbID = item.imdbID {
+                    guard let hit = try await tv.lookupShow(imdbID: imdbID) else { return nil }
+                    updated.tv = hit
+                    break
+                }
+                let results = try await tv.searchShows(query: item.name)
+                guard let hit = results.first(where: {
+                    ImportMatcher.normalize($0.title) == name && yearsAgree($0.firstAirYear, item.fallbackYear)
+                }) else { return nil }
+                updated.tv = hit
 
             case .books where item.book == nil || item.book?.coverURL == nil:
                 let author = item.book?.author ?? item.fallbackCreator

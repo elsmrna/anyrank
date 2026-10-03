@@ -185,6 +185,20 @@ enum PreviewSupport {
         }
     }
 
+    /// One TV list from the mock catalog, spanning two buckets.
+    static func tvRepository() -> Repository {
+        makeRepository { repo in
+            let tv = RankList(name: "TV — All-time", category: .tv)
+            let buckets: [Bucket] = [.loved, .loved, .loved, .liked, .liked, .fine]
+            seedStaged(in: tv, items: zip(MockTVSearchService.pool, buckets).map { show, bucket in
+                var staged = StagedItem(name: show.title, category: .tv)
+                staged.tv = show
+                return (staged, bucket)
+            })
+            repo.addList(tv)
+        }
+    }
+
     /// One Stays list of LA hotels from the mock Places catalog.
     static func staysRepository() -> Repository {
         makeRepository { repo in

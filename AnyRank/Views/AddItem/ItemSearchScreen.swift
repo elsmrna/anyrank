@@ -30,6 +30,8 @@ struct ItemSearchScreen: View {
             )
         case .movies:
             MovieSearchScreen(onIdentified: onIdentified)
+        case .tv:
+            TVSearchScreen(onIdentified: onIdentified)
         case .books:
             BookSearchScreen(onIdentified: onIdentified)
         case .anime:

@@ -185,7 +185,7 @@ struct ItemDetailView: View {
         if let brand = ServiceBrand(url: url) { return brand.displayName }
         switch list.category {
         case .restaurants, .bars, .stays: return "Maps"
-        case .movies:             return "IMDb"
+        case .movies, .tv:        return "IMDb"
         case .books:              return "StoryGraph"
         case .anime, .manga:      return "AniList"
         case .games:              return "IGDB"
@@ -198,7 +198,7 @@ struct ItemDetailView: View {
         switch list.category {
         case .restaurants, .bars: return "Visited"
         case .stays:              return "Stayed"
-        case .movies, .anime:     return "Watched"
+        case .movies, .tv, .anime: return "Watched"
         case .books, .manga:      return "Read"
         case .games:              return "Played"
         case .albums:             return "Listened"
@@ -219,7 +219,7 @@ struct ItemDetailView: View {
         case .restaurants, .bars, .stays, .custom: value = item.address
         case .books:                       value = item.author
         case .albums:                      value = item.artist
-        case .movies, .anime, .manga, .games: value = nil
+        case .movies, .tv, .anime, .manga, .games: value = nil
         }
         return value.flatMap { $0.isEmpty ? nil : $0 }
     }
@@ -239,6 +239,8 @@ struct ItemDetailView: View {
         }
         if let year = item.releaseYear { facts.append(String(year)) }
         switch list.category {
+        case .tv:
+            if let seasons = item.seasonCount { facts.append("\(seasons) season\(seasons == 1 ? "" : "s")") }
         case .anime:
             if let eps = item.episodeCount, eps > 1 { facts.append("\(eps) episodes") }
         case .manga:

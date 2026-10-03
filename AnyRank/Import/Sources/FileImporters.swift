@@ -50,7 +50,7 @@ enum FileImporters {
     static func candidates(from files: [ImportFile], source: ImportSourceKind, category: Category) throws -> [ImportCandidate] {
         switch source {
         case .letterboxd: return try letterboxd(files)
-        case .imdb:       return try imdb(files)
+        case .imdb:       return try imdb(files, category: category == .tv ? .tv : .movies)
         case .goodreads:  return try goodreads(files.map(\.text).joined(separator: "\n"))
         case .storyGraph: return try storyGraph(files.map(\.text).joined(separator: "\n"))
         case .pastedList: return pastedList(files.map(\.text).joined(separator: "\n"), category: category)
@@ -160,18 +160,23 @@ enum FileImporters {
     // MARK: IMDb
 
     /// IMDb's ratings export, or any exported list or watchlist (same
-    /// columns). Only film-like titles are kept — series, episodes, games
-    /// and podcasts are skipped. Each row carries its IMDb ID, so posters
-    /// come from an exact TMDB lookup rather than a title search.
-    static func imdb(_ text: String) throws -> [ImportCandidate] {
-        try imdb([ImportFile(name: "", text: text)])
+    /// columns). Into a Movies list only film-like titles are kept; into a
+    /// TV list only series and mini-series. Episodes, games and podcasts are
+    /// always skipped. Each row carries its IMDb ID, so posters come from an
+    /// exact TMDB lookup rather than a title search.
+    static func imdb(_ text: String, category: Category = .movies) throws -> [ImportCandidate] {
+        try imdb([ImportFile(name: "", text: text)], category: category)
     }
 
-    static func imdb(_ files: [ImportFile]) throws -> [ImportCandidate] {
+    static func imdb(_ files: [ImportFile], category: Category = .movies) throws -> [ImportCandidate] {
         let filmTypes: Set<String> = [
             "movie", "tv movie", "tvmovie", "short", "tv short", "tvshort",
             "video", "tv special", "tvspecial",
         ]
+        let seriesTypes: Set<String> = [
+            "tv series", "tvseries", "tv mini series", "tvminiseries", "tv mini-series",
+        ]
+        let keptTypes = category == .tv ? seriesTypes : filmTypes
         var seen = Set<String>()
         var candidates: [ImportCandidate] = []
         var sawIMDbFile = false
@@ -183,9 +188,11 @@ enum FileImporters {
                 guard let title = row["Title"],
                       let id = row["Const"].flatMap(ImportMatcher.Identity.imdbID(in:)),
                       seen.insert(id).inserted else { continue }
-                if let type = row["Title Type"]?.lowercased(), !filmTypes.contains(type) { continue }
+                if let type = row["Title Type"]?.lowercased(), !keptTypes.contains(type) { continue }
+                // Exports without a type column only contain films.
+                if category == .tv && row["Title Type"] == nil { continue }
 
-                var staged = StagedItem(name: title, category: .movies)
+                var staged = StagedItem(name: title, category: category)
                 staged.imdbID = id
                 staged.fallbackYear = row["Year"].flatMap { Int($0) }
                 staged.sourceURL = URL(string: "https://www.imdb.com/title/\(id)/")

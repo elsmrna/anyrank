@@ -32,7 +32,7 @@ enum ListCSVCodec {
         "id", "name", "bucket", "score",
         "date_consumed", "notes",
         "place_id", "address", "latitude", "longitude", "maps_url",
-        "tmdb_id", "release_year", "poster_url", "imdb_url",
+        "tmdb_id", "release_year", "poster_url", "imdb_url", "season_count",
         "author", "isbn", "storygraph_url", "cover_url",
         "anime_format", "episode_count", "anilist_url",
         "chapter_count", "volume_count",
@@ -70,6 +70,7 @@ enum ListCSVCodec {
             item.releaseYear.map { String($0) } ?? "",
             item.posterURLString ?? "",
             item.imdbURLString ?? "",
+            item.seasonCount.map { String($0) } ?? "",
             item.author ?? "",
             item.isbn ?? "",
             item.storyGraphURLString ?? "",
@@ -147,6 +148,7 @@ enum ListCSVCodec {
         item.releaseYear = field(row, columnIndex, "release_year").flatMap(Int.init)
         item.posterURLString = field(row, columnIndex, "poster_url")
         item.imdbURLString = field(row, columnIndex, "imdb_url")
+        item.seasonCount = field(row, columnIndex, "season_count").flatMap(Int.init)
 
         item.author = field(row, columnIndex, "author")
         item.isbn = field(row, columnIndex, "isbn")

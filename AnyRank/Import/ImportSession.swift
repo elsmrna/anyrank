@@ -68,9 +68,11 @@ enum ImportSourceKind: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// Whether this source can feed a list of `category`.
+    /// Whether this source can feed a list of `category`. IMDb exports mix
+    /// films and series, so they can feed a Movies or a TV list.
     func canTarget(_ category: Category) -> Bool {
-        self.category == nil || self.category == category
+        if self == .imdb { return category == .movies || category == .tv }
+        return self.category == nil || self.category == category
     }
 }
 
