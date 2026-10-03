@@ -82,6 +82,11 @@ final class RankItem: Identifiable {
     var playingMinutes: Int?
     var bggURLString: String?
 
+    // MARK: Band metadata
+    // Bands reuse `coverURLString` for the artist photo.
+    var fanCount: Int?
+    var deezerURLString: String?
+
     // MARK: Album metadata
     /// Artist name. Multiple artists are stored as one string joined with
     /// ", " to keep the CSV dialect simple.
@@ -113,6 +118,7 @@ final class RankItem: Identifiable {
         case .games: urlString = igdbURLString
         case .boardGames: urlString = bggURLString
         case .albums: urlString = spotifyURLString
+        case .bands: urlString = deezerURLString
         case .custom, .none:
             // Custom items can carry Maps metadata when the list opted
             // into `linksToMapsLocation`; prefer that as the canonical

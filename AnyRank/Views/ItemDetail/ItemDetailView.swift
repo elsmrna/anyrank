@@ -191,6 +191,7 @@ struct ItemDetailView: View {
         case .games:              return "IGDB"
         case .boardGames:         return "BoardGameGeek"
         case .albums:             return "Spotify"
+        case .bands:              return "Deezer"
         case .custom:             return item.mapsURLString != nil ? "Maps" : "browser"
         }
     }
@@ -202,7 +203,7 @@ struct ItemDetailView: View {
         case .movies, .tv, .anime: return "Watched"
         case .books, .manga:      return "Read"
         case .games, .boardGames: return "Played"
-        case .albums:             return "Listened"
+        case .albums, .bands:     return "Listened"
         case .custom:             return "Date"
         }
     }
@@ -220,7 +221,7 @@ struct ItemDetailView: View {
         case .restaurants, .bars, .stays, .custom: value = item.address
         case .books:                       value = item.author
         case .albums:                      value = item.artist
-        case .movies, .tv, .anime, .manga, .games, .boardGames: value = nil
+        case .movies, .tv, .anime, .manga, .games, .boardGames, .bands: value = nil
         }
         return value.flatMap { $0.isEmpty ? nil : $0 }
     }
@@ -248,6 +249,8 @@ struct ItemDetailView: View {
             if let length = MangaLength.text(chapters: item.chapterCount, volumes: item.volumeCount, long: true) {
                 facts.append(length)
             }
+        case .bands:
+            if let fans = ArtistText.fans(item.fanCount) { facts.append(fans) }
         case .boardGames:
             if let players = BoardGameText.players(min: item.minPlayers, max: item.maxPlayers) { facts.append(players) }
             if let minutes = item.playingMinutes { facts.append("\(minutes) min") }

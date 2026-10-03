@@ -19,6 +19,7 @@ struct RankingSpreeView: View {
     @Environment(\.mangaService) private var mangaService
     @Environment(\.tvService) private var tvService
     @Environment(\.boardGameService) private var boardGameService
+    @Environment(\.artistService) private var artistService
     @Environment(\.gameService) private var gameService
     @Environment(\.musicService) private var musicService
 
@@ -141,7 +142,7 @@ struct RankingSpreeView: View {
     private func enrichUpcoming() async {
         let enricher = ImportEnricher(
             movies: movieService, tv: tvService, books: bookService, anime: animeService, manga: mangaService,
-            games: gameService, boardGames: boardGameService, music: musicService
+            games: gameService, boardGames: boardGameService, music: musicService, bands: artistService
         )
         let upcoming = (session?.pending.prefix(3) ?? []).filter { !lookedUp.contains($0.id) }
         for item in upcoming {

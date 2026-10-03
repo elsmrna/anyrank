@@ -111,6 +111,7 @@ enum RankingApplier {
         case .anime, .manga: return item.coverURLString
         case .games:  return item.coverURLString
         case .boardGames: return item.coverURLString
+        case .bands: return item.coverURLString
         case .albums: return item.coverURLString
         case .restaurants, .bars, .stays: return PlacePhotos.url(forPlaceID: item.placeID)
         case .custom: return list.linksToMapsLocation ? PlacePhotos.url(forPlaceID: item.placeID) : nil
@@ -142,6 +143,8 @@ enum RankingApplier {
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         case .boardGames:
             return BoardGameText.secondary(year: item.releaseYear, minPlayers: item.minPlayers, maxPlayers: item.maxPlayers)
+        case .bands:
+            return ArtistText.fans(item.fanCount)
         case .games:
             var parts: [String] = []
             let platforms = item.platforms ?? []

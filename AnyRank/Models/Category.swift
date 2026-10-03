@@ -14,6 +14,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
     case games
     case boardGames
     case albums
+    case bands
     case custom
 
     var id: String { rawValue }
@@ -31,6 +32,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
         case .games: return "Games"
         case .boardGames: return "Board games"
         case .albums: return "Albums"
+        case .bands: return "Bands"
         case .custom: return "Custom"
         }
     }
@@ -39,7 +41,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
     /// Custom uses a free-text name + pasted link instead.
     var supportsExternalSearch: Bool {
         switch self {
-        case .restaurants, .bars, .stays, .movies, .tv, .books, .anime, .manga, .games, .boardGames, .albums: return true
+        case .restaurants, .bars, .stays, .movies, .tv, .books, .anime, .manga, .games, .boardGames, .albums, .bands: return true
         case .custom: return false
         }
     }
@@ -57,6 +59,7 @@ enum Category: String, Codable, CaseIterable, Identifiable {
         case .games: return "gamecontroller"
         case .boardGames: return "dice"
         case .albums: return "opticaldisc"
+        case .bands: return "music.mic"
         case .custom: return "list.bullet.rectangle"
         }
     }

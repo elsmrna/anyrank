@@ -37,6 +37,9 @@ struct StagedItem: Identifiable, Equatable, Codable {
     // Board games
     var boardGame: BoardGameSearchResult?
 
+    // Bands
+    var band: ArtistSearchResult?
+
     // Music
     var album: AlbumSearchResult?
 
@@ -139,6 +142,11 @@ struct StagedItem: Identifiable, Equatable, Codable {
             item.coverURLString = boardGame.coverURL?.absoluteString
             item.bggURLString = boardGame.bggURL?.absoluteString
         }
+        if let band {
+            item.fanCount = band.fanCount
+            item.coverURLString = band.imageURL?.absoluteString
+            item.deezerURLString = band.deezerURL?.absoluteString
+        }
         if let album {
             item.artist = album.artist
             item.releaseYear = album.releaseYear
@@ -191,6 +199,7 @@ struct StagedItem: Identifiable, Equatable, Codable {
         case .manga:  return manga?.coverURL?.absoluteString
         case .games:  return game?.coverURL?.absoluteString
         case .boardGames: return boardGame?.coverURL?.absoluteString
+        case .bands:  return band?.imageURL?.absoluteString
         case .albums: return album?.coverURL?.absoluteString
         case .restaurants, .bars, .stays, .custom: return PlacePhotos.url(forPlaceID: place?.id)
         }
@@ -226,6 +235,8 @@ struct StagedItem: Identifiable, Equatable, Codable {
             guard let game else { return year }
             let platforms = GameSearchScreen.compactPlatforms(game.platforms)
             return joined([platforms, game.firstReleaseYear.map(String.init) ?? year])
+        case .bands:
+            return ArtistText.fans(band?.fanCount)
         case .boardGames:
             guard let boardGame else { return year }
             return BoardGameText.secondary(year: boardGame.yearPublished, minPlayers: boardGame.minPlayers, maxPlayers: boardGame.maxPlayers)

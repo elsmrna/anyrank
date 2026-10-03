@@ -151,6 +151,8 @@ struct AnyRankApp: App {
                 .environment(\.gameService, gameService)
                 .environment(\.boardGameService, boardGameService)
                 .environment(\.musicService, musicService)
+                // Deezer's artist search is keyless, so always live.
+                .environment(\.artistService, LiveDeezerArtistService())
                 .environment(\.steamLibraryService, steamService)
                 .environment(\.importStore, importStore)
                 .environment(\.router, router)

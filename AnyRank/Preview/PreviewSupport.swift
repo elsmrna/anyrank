@@ -213,6 +213,20 @@ enum PreviewSupport {
         }
     }
 
+    /// One Bands list from the mock catalog.
+    static func bandsRepository() -> Repository {
+        makeRepository { repo in
+            let bands = RankList(name: "Bands", category: .bands)
+            let buckets: [Bucket] = [.loved, .loved, .loved, .liked, .liked, .fine]
+            seedStaged(in: bands, items: zip(MockArtistSearchService.pool, buckets).map { artist, bucket in
+                var staged = StagedItem(name: artist.name, category: .bands)
+                staged.band = artist
+                return (staged, bucket)
+            })
+            repo.addList(bands)
+        }
+    }
+
     /// One Stays list of LA hotels from the mock Places catalog.
     static func staysRepository() -> Repository {
         makeRepository { repo in

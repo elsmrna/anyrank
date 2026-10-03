@@ -74,6 +74,8 @@ struct ItemRow: View {
             return parts.isEmpty ? nil : parts.joined(separator: " · ")
         case .boardGames:
             return BoardGameText.secondary(year: item.releaseYear, minPlayers: item.minPlayers, maxPlayers: item.maxPlayers)
+        case .bands:
+            return ArtistText.fans(item.fanCount)
         case .games:
             // Year is the most useful disambiguator across remasters.
             // Platforms fit better in the item detail than a row.

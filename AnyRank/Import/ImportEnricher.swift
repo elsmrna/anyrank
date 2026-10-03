@@ -18,6 +18,7 @@ struct ImportEnricher {
     let games: any GameSearchService
     var boardGames: any BoardGameSearchService = MockBoardGameSearchService()
     let music: any MusicSearchService
+    var bands: any ArtistSearchService = MockArtistSearchService()
 
     /// An enriched copy of `item`, or nil when there's nothing to add or no
     /// confident match.
@@ -99,6 +100,11 @@ struct ImportEnricher {
                     ImportMatcher.normalize($0.name) == name && yearsAgree($0.yearPublished, item.fallbackYear)
                 }) else { return nil }
                 updated.boardGame = hit
+
+            case .bands where item.band == nil:
+                let results = try await bands.searchArtists(query: item.name)
+                guard let hit = results.first(where: { ImportMatcher.normalize($0.name) == name }) else { return nil }
+                updated.band = hit
 
             case .albums where item.album == nil:
                 let results = try await music.searchAlbums(query: item.name)

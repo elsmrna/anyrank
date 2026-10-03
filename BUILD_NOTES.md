@@ -74,7 +74,10 @@ Every category-specific search service is live:
 - Books → Open Library `/search.json` + optimistic StoryGraph slug ([#11](https://github.com/elsmrna/anyrank/issues/11))
 - Anime / Manga → AniList GraphQL; `LiveAniListSearchService` serves both, varying only the media type ([#2](https://github.com/elsmrna/anyrank/issues/2), [#32](https://github.com/elsmrna/anyrank/issues/32))
 - Video Games → IGDB via Twitch client credentials ([#3](https://github.com/elsmrna/anyrank/issues/3))
-- Albums → Spotify Web API via client credentials ([#13](https://github.com/elsmrna/anyrank/issues/13)).
+- Albums → Spotify Web API via client credentials ([#13](https://github.com/elsmrna/anyrank/issues/13))
+- TV → TMDB `/search/tv` + `/tv/{id}` (same client and token as Movies); IMDb exports can feed a TV list ([#29](https://github.com/elsmrna/anyrank/issues/29))
+- Board games → BoardGameGeek XML API v2, which needs `BGG_API_TOKEN` from a registered BGG application; mock catalog until then ([#30](https://github.com/elsmrna/anyrank/issues/30))
+- Bands → Deezer's public artist search, keyless ([#33](https://github.com/elsmrna/anyrank/issues/33)).
 
 The IGDB and Spotify services share `AppOAuthTokenStore` — a small actor that caches app-level OAuth 2.0 client-credentials tokens and refreshes on demand. Both are gated by their respective `<Provider>_CLIENT_ID` / `<Provider>_CLIENT_SECRET` in `Secrets.xcconfig`; either missing → the mock service is injected instead, so the app stays runnable without secrets.
 
